@@ -152,32 +152,38 @@ const Synthesiser = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-2">
+          <h1 className="text-4xl font-medium text-foreground mb-3">
             The Synthesiser
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-foreground/70 text-base">
             Transform YouTube videos into concise, intelligent summaries
           </p>
         </div>
 
-        <Tabs defaultValue="summarise" className="max-w-4xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="summarise" className="flex items-center gap-2">
+        <Tabs defaultValue="summarise" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger 
+              value="summarise" 
+              className="flex items-center gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
               <Play className="w-4 h-4" />
               Summarise
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="history" 
+              className="flex items-center gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
               <History className="w-4 h-4" />
               History ({summaries.length})
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="summarise" className="space-y-6">
-            <Card className="shadow-lg border-0 bg-card/50 backdrop-blur-sm">
-              <CardContent className="p-8">
+            <div className="border border-border rounded-2xl bg-background shadow-sm">
+              <div className="p-8">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-4">
                     <Input
@@ -185,18 +191,18 @@ const Synthesiser = () => {
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder="Paste YouTube URL here..."
-                      className="h-12 text-lg border-2 focus:border-accent transition-all duration-200"
+                      className="h-14 text-base border-border rounded-xl bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
                       disabled={isLoading}
                     />
                     
                     {isLoading && (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="space-y-4 py-4">
+                        <div className="flex items-center gap-3 text-muted-foreground">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Processing video...</span>
+                          <span className="text-sm">Processing video...</span>
                         </div>
                         <Progress value={progress} className="h-2" />
-                        <div className="text-sm text-muted-foreground text-center">
+                        <div className="text-xs text-muted-foreground text-center">
                           {progress.toFixed(0)}% complete
                         </div>
                       </div>
@@ -207,11 +213,11 @@ const Synthesiser = () => {
                     <Button 
                       type="submit" 
                       disabled={isLoading}
-                      className="bg-success hover:bg-success/90 text-success-foreground px-12 py-3 text-lg font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+                      className="bg-success hover:bg-success/90 text-success-foreground px-8 py-3 h-12 text-base font-medium rounded-xl transition-all duration-200 disabled:opacity-50"
                     >
                       {isLoading ? (
                         <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Processing...
                         </>
                       ) : (
@@ -220,48 +226,50 @@ const Synthesiser = () => {
                     </Button>
                   </div>
                 </form>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {currentSummary && (
-              <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm">
-                <CardContent className="p-8">
+              <div className="border border-border rounded-2xl bg-background shadow-sm">
+                <div className="p-8">
                   <div className="space-y-4">
                     <div className="flex items-start justify-between">
-                      <h3 className="text-xl font-semibold text-foreground">
+                      <h3 className="text-lg font-medium text-foreground">
                         {currentSummary.title}
                       </h3>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {currentSummary.timestamp}
                       </span>
                     </div>
-                    <p className="text-foreground leading-relaxed text-base">
-                      {currentSummary.summary}
-                    </p>
+                    <div className="prose prose-sm max-w-none">
+                      <p className="text-foreground/80 leading-relaxed text-sm m-0">
+                        {currentSummary.summary}
+                      </p>
+                    </div>
                     <div className="pt-4 border-t border-border">
                       <a 
                         href={currentSummary.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:text-accent/80 transition-colors text-sm"
+                        className="text-primary hover:underline transition-colors text-sm"
                       >
                         View original video →
                       </a>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-foreground">Summary History</h2>
+              <h2 className="text-xl font-medium text-foreground">Summary History</h2>
               {summaries.length > 0 && (
                 <Button 
                   variant="outline" 
                   onClick={clearHistory}
-                  className="text-sm"
+                  className="text-sm h-9 rounded-lg border-border hover:bg-muted/50"
                 >
                   Clear History
                 </Button>
@@ -269,41 +277,41 @@ const Synthesiser = () => {
             </div>
 
             {summaries.length === 0 ? (
-              <Card className="shadow-lg border-0 bg-card/50 backdrop-blur-sm">
-                <CardContent className="p-12 text-center">
+              <div className="border border-border rounded-2xl bg-background shadow-sm">
+                <div className="p-12 text-center">
                   <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">No summaries yet</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="text-base font-medium text-foreground mb-2">No summaries yet</h3>
+                  <p className="text-muted-foreground text-sm">
                     Start by summarizing your first YouTube video!
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {summaries.map((summary) => (
-                  <Card key={summary.id} className="shadow-md border-0 bg-card/70 backdrop-blur-sm hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6">
+                  <div key={summary.id} className="border border-border rounded-2xl bg-background shadow-sm hover:shadow-md transition-shadow">
+                    <div className="p-6">
                       <div className="space-y-3">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-medium text-foreground">{summary.title}</h4>
+                          <h4 className="font-medium text-foreground text-sm">{summary.title}</h4>
                           <span className="text-xs text-muted-foreground">
                             {summary.timestamp}
                           </span>
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-xs text-foreground/70 leading-relaxed">
                           {summary.summary}
                         </p>
                         <a 
                           href={summary.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-accent hover:text-accent/80 transition-colors text-xs inline-block"
+                          className="text-primary hover:underline transition-colors text-xs inline-block"
                         >
                           View original video →
                         </a>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

@@ -8,26 +8,26 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 250 50% 98%;
-    --foreground: 220 20% 15%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 15%;
+    --card-foreground: 0 0% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 15%;
+    --popover-foreground: 0 0% 15%;
 
-    --primary: 220 25% 20%;
+    --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 220 25% 20%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 155 60% 50%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
 
     --success: 142 70% 45%;
     --success-foreground: 0 0% 98%;
@@ -35,16 +35,13 @@ All colors MUST be HSL.
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 95%;
-    --ring: 155 60% 50%;
+    --border: 0 0% 90%;
+    --input: 0 0% 96%;
+    --ring: 0 0% 15%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(155 60% 50%), hsl(155 70% 40%));
-    --gradient-bg: linear-gradient(180deg, hsl(250 50% 98%), hsl(220 30% 96%));
-    --shadow-soft: 0 4px 20px -4px hsl(220 25% 20% / 0.08);
-    --shadow-medium: 0 8px 30px -8px hsl(220 25% 20% / 0.12);
+    --radius: 0.75rem;
 
-    --radius: 0.5rem;
+    
 
     --sidebar-background: 0 0% 98%;
 
