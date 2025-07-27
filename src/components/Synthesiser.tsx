@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Play, History, Loader2 } from 'lucide-react';
+import { getBackendUrl } from '@/config/api';
 
 interface Summary {
   id: string;
@@ -60,7 +61,7 @@ const Synthesiser = () => {
 
   const summarizeVideo = async (videoId: string, url: string): Promise<Summary> => {
     try {
-      const response = await fetch('/api/summarize', {
+      const response = await fetch(`${getBackendUrl()}/api/summarize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
