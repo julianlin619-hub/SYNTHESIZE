@@ -108,3 +108,48 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Summary content styling */
+.summary-content {
+  line-height: 1.6;
+  font-size: 15px;
+  color: hsl(var(--foreground) / 0.8);
+}
+
+.summary-content .summary-section {
+  margin-bottom: 2rem;
+}
+
+.summary-content .summary-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  margin: 2rem 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-content .summary-paragraph {
+  margin: 1rem 0;
+  line-height: 1.6;
+}
+
+.summary-content .summary-list {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.summary-content .summary-item {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.summary-content strong {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.summary-content .summary-section:first-child .summary-heading {
+  margin-top: 0;
+}

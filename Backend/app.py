@@ -16,9 +16,23 @@ CORS(app)  # Enable CORS for all routes
 
 # API Keys
 SUPADATA_API_KEY = os.getenv('SUPADATA_API_KEY')
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-print("Using SupaData API Key:", SUPADATA_API_KEY)
+# Validate required environment variables
+if not SUPADATA_API_KEY:
+    print("ERROR: SUPADATA_API_KEY environment variable is not set!")
+    print("Please create a .env file with your SupaData API key")
+if not OPENAI_API_KEY:
+    print("ERROR: OPENAI_API_KEY environment variable is not set!")
+    print("Please create a .env file with your OpenAI API key")
+
+if not SUPADATA_API_KEY or not OPENAI_API_KEY:
+    print("Missing required API keys. The application may not work properly.")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+print("Using SupaData API Key:", SUPADATA_API_KEY[:10] + "..." if SUPADATA_API_KEY else "NOT SET")
+print("Using OpenAI API Key:", OPENAI_API_KEY[:10] + "..." if OPENAI_API_KEY else "NOT SET")
 
 
 # 1. Extract YouTube Video ID
@@ -207,16 +221,39 @@ def summary_to_html(summary_text):
     def is_fully_bold(line):
         return bool(re.match(r'^\*\*[^*]+\*\*$', line.strip()))
 
+    # Define section icons based on common keywords
+    def get_section_icon(header):
+        header_lower = header.lower()
+        if any(word in header_lower for word in ['introduction', 'context', 'overview', 'background']):
+            return '🧠'
+        elif any(word in header_lower for word in ['key', 'principle', 'core', 'main', 'essential']):
+            return '📌'
+        elif any(word in header_lower for word in ['strategy', 'action', 'step', 'method', 'approach']):
+            return '💡'
+        elif any(word in header_lower for word in ['example', 'case', 'real-world', 'practical']):
+            return '🔍'
+        elif any(word in header_lower for word in ['quote', 'saying', 'statement']):
+            return '💬'
+        elif any(word in header_lower for word in ['takeaway', 'conclusion', 'summary', 'final']):
+            return '🎯'
+        elif any(word in header_lower for word in ['comparison', 'difference', 'versus']):
+            return '⚖️'
+        elif any(word in header_lower for word in ['statistic', 'data', 'number', 'metric']):
+            return '📊'
+        else:
+            return '📋'
+
     for line in lines:
         stripped = line.strip()
         # Fully bolded line (header)
         if is_fully_bold(stripped):
             header = re.sub(r'^\*\*|\*\*$', '', stripped)
+            icon = get_section_icon(header)
             if in_list and list_buffer:
-                html_lines.append('<ul>' + '\n'.join(list_buffer) + '</ul>')
+                html_lines.append('<ul class="summary-list">' + '\n'.join(list_buffer) + '</ul>')
                 list_buffer = []
                 in_list = False
-            html_lines.append(f'<h2 style="font-size:22px;font-weight:700;margin:1.5em 0 0.5em 0;">{header}</h2>')
+            html_lines.append(f'<section class="summary-section"><h2 class="summary-heading">{icon} {header}</h2>')
             continue
         # Markdown or dash bullets
         if re.match(r'^([-*]|\d+\.)\s+', stripped):
@@ -226,39 +263,37 @@ def summary_to_html(summary_text):
             bullet_text = re.sub(r'^([-*]|\d+\.)\s+', '', stripped)
             # Convert inline bold to <strong>
             bullet_text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', bullet_text)
-            list_buffer.append(f'<li>{bullet_text}</li>')
+            list_buffer.append(f'<li class="summary-item">{bullet_text}</li>')
             continue
         # End of a list
         if in_list and not stripped:
-            html_lines.append('<ul>' + '\n'.join(list_buffer) + '</ul>')
+            html_lines.append('<ul class="summary-list">' + '\n'.join(list_buffer) + '</ul>')
             list_buffer = []
             in_list = False
             continue
         # If still in a list but next line is not a bullet
         if in_list and not re.match(r'^([-*]|\d+\.)\s+', stripped):
-            html_lines.append('<ul>' + '\n'.join(list_buffer) + '</ul>')
+            html_lines.append('<ul class="summary-list">' + '\n'.join(list_buffer) + '</ul>')
             list_buffer = []
             in_list = False
         # Paragraphs (with inline bold)
         if stripped:
             # Convert inline bold to <strong>
             p = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', stripped)
-            html_lines.append(f'<p>{p}</p>')
+            html_lines.append(f'<p class="summary-paragraph">{p}</p>')
     # If list at end
     if in_list and list_buffer:
-        html_lines.append('<ul>' + '\n'.join(list_buffer) + '</ul>')
+        html_lines.append('<ul class="summary-list">' + '\n'.join(list_buffer) + '</ul>')
 
-    # Add spacing between blocks
+    # Close any open sections
     html = '\n'.join(html_lines)
-    html = re.sub(r'(</ul>|</h2>)(?!\n)', r'\1\n', html)
-    html = re.sub(r'(</ul>\n)(<h2)', r'\1<br>\2', html)
-    html = re.sub(r'(</ul>\n)(<p)', r'\1<br>\2', html)
-    html = re.sub(r'(</h2>\n)(<ul|<p)', r'\1<br>\2', html)
-    html = re.sub(r'(</p>)(<h2)', r'\1<br>\2', html)
-
-    # Wrap in summary-output div if not already
-    if not html.strip().startswith('<div class="summary-output"'):
-        html = f'<div class="summary-output">{html}</div>'
+    html = re.sub(r'(</ul>|</p>)(?!\s*</section>)', r'\1</section>', html)
+    
+    # Add spacing between sections
+    html = re.sub(r'(</section>)(<section)', r'\1\n\2', html)
+    
+    # Wrap in summary-output div
+    html = f'<div class="summary-output">{html}</div>'
     return Markup(html)
 
 # 7. Flask routes
@@ -268,22 +303,35 @@ def index():
 
 @app.route('/api/summarize', methods=['POST'])
 def summarize():
+    # Check if API keys are configured
+    if not SUPADATA_API_KEY:
+        return jsonify({'error': 'SupaData API key not configured. Please set SUPADATA_API_KEY environment variable.'}), 500
+    if not OPENAI_API_KEY:
+        return jsonify({'error': 'OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.'}), 500
+    
     data = request.json
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+    
     url = data.get('url')
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
+    
     video_id = extract_video_id(url)
     if not video_id:
         return jsonify({'error': 'Invalid YouTube URL'}), 400
+    
     try:
         transcript = get_supadata_transcript(video_id)
     except Exception as e:
         return jsonify({'error': f'Could not fetch transcript: {str(e)}'}), 500
+    
     try:
         summary = summarize_with_openai(transcript)
         summary_html = summary_to_html(summary)
     except Exception as e:
         return jsonify({'error': f'Could not summarize transcript: {str(e)}'}), 500
+    
     return jsonify({'summary': str(summary_html)})
 
 # 8. Run on port 5050 to avoid macOS conflict

@@ -69,8 +69,25 @@ const Synthesiser = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to summarize video');
+        // Try to parse as JSON first
+        let errorMessage = 'Failed to summarize video';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          // If JSON parsing fails, try to get text content
+          try {
+            const textContent = await response.text();
+            if (textContent.includes('The page') || textContent.includes('Error')) {
+              errorMessage = 'Backend server is not running or not accessible. Please make sure the backend is started on port 5055.';
+            } else {
+              errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+          } catch (textError) {
+            errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -236,29 +253,37 @@ const Synthesiser = () => {
             {currentSummary && (
               <div className="border border-border rounded-2xl bg-background shadow-sm">
                 <div className="p-8">
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="flex items-start justify-between">
-                      <h3 className="text-lg font-medium text-foreground">
+                      <h3 className="text-xl font-semibold text-foreground">
                         {currentSummary.title}
                       </h3>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                         {currentSummary.timestamp}
                       </span>
                     </div>
-                    <div className="prose prose-sm max-w-none">
+                    
+                    <div className="max-w-[800px] mx-auto">
                       <div 
-                        className="text-foreground/80 leading-relaxed text-sm m-0"
+                        className="summary-content"
                         dangerouslySetInnerHTML={{ __html: currentSummary.summary }}
+                        style={{
+                          lineHeight: '1.6',
+                          fontSize: '15px',
+                          color: 'hsl(var(--foreground) / 0.8)'
+                        }}
                       />
                     </div>
-                    <div className="pt-4 border-t border-border">
+                    
+                    <div className="pt-6 border-t border-border">
                       <a 
                         href={currentSummary.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline transition-colors text-sm"
+                        className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors text-sm font-medium"
                       >
-                        View original video →
+                        <Play className="w-4 h-4" />
+                        View original video
                       </a>
                     </div>
                   </div>
@@ -292,29 +317,34 @@ const Synthesiser = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {summaries.map((summary) => (
                   <div key={summary.id} className="border border-border rounded-2xl bg-background shadow-sm hover:shadow-md transition-shadow">
                     <div className="p-6">
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-medium text-foreground text-sm">{summary.title}</h4>
-                          <span className="text-xs text-muted-foreground">
+                          <h4 className="font-semibold text-foreground text-base">{summary.title}</h4>
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
                             {summary.timestamp}
                           </span>
                         </div>
-                        <div 
-                          className="text-xs text-foreground/70 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: summary.summary }}
-                        />
-                        <a 
-                          href={summary.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline transition-colors text-xs inline-block"
-                        >
-                          View original video →
-                        </a>
+                        <div className="max-w-[700px]">
+                          <div 
+                            className="summary-content text-foreground/70 leading-relaxed text-sm line-clamp-3"
+                            dangerouslySetInnerHTML={{ __html: summary.summary }}
+                          />
+                        </div>
+                        <div className="pt-4 border-t border-border">
+                          <a 
+                            href={summary.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors text-xs font-medium"
+                          >
+                            <Play className="w-3 h-3" />
+                            View original video
+                          </a>
+                        </div>
                       </div>
                     </div>
                   </div>
