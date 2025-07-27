@@ -1,73 +1,152 @@
-# Welcome to your Lovable project
+# YouTube GPT Synthesizer
 
-## Project info
+A modern web application that transforms YouTube videos into intelligent, detailed summaries using AI. Built with React (frontend) and Flask (backend).
 
-**URL**: https://lovable.dev/projects/8ee5ffc5-9ea9-49ad-ad9c-58b99e21badc
+## Features
 
-## How can I edit this code?
+- 🎥 **YouTube Video Processing**: Extract and process YouTube video transcripts
+- 🤖 **AI-Powered Summaries**: Generate detailed, structured summaries using OpenAI GPT-4
+- 📱 **Modern UI**: Beautiful, responsive interface built with React and Tailwind CSS
+- 💾 **History Management**: Save and view your previous summaries
+- ⚡ **Real-time Processing**: Live progress tracking during summarization
 
-There are several ways of editing your application.
+## Prerequisites
 
-**Use Lovable**
+- Node.js (v18 or higher)
+- Python 3.8 or higher
+- OpenAI API key
+- SupaData API key
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8ee5ffc5-9ea9-49ad-ad9c-58b99e21badc) and start prompting.
+## Installation
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### 1. Clone the repository
+```bash
+git clone <repository-url>
+cd youtube-gpt-synthesizer
 ```
 
-**Edit a file directly in GitHub**
+### 2. Install Frontend Dependencies
+```bash
+npm install
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 3. Install Backend Dependencies
+```bash
+cd Backend
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cd ..
+```
 
-**Use GitHub Codespaces**
+### 4. Configure API Keys
+Create a `.env` file in the `Backend` directory:
+```bash
+cd Backend
+echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+echo "SUPADATA_API_KEY=your_supadata_api_key_here" >> .env
+cd ..
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Required API Keys:**
+- **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
+- **SupaData API Key**: Get from [SupaData](https://supadata.ai/) for YouTube transcript access
 
-## What technologies are used for this project?
+## Usage
 
-This project is built with:
+### Quick Start
+Use the provided startup script:
+```bash
+./start.sh
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Manual Start
+1. **Start Backend Server**:
+   ```bash
+   cd Backend
+   source venv/bin/activate
+   python app.py
+   ```
+   Backend will run on `http://localhost:5055`
 
-## How can I deploy this project?
+2. **Start Frontend Server** (in a new terminal):
+   ```bash
+   npm run dev
+   ```
+   Frontend will run on `http://localhost:8080`
 
-Simply open [Lovable](https://lovable.dev/projects/8ee5ffc5-9ea9-49ad-ad9c-58b99e21badc) and click on Share -> Publish.
+### Using the Application
 
-## Can I connect a custom domain to my Lovable project?
+1. **Open your browser** and navigate to `http://localhost:8080`
+2. **Paste a YouTube URL** in the input field
+3. **Click "Summarise"** to process the video
+4. **View the generated summary** with detailed insights
+5. **Access your history** to review previous summaries
 
-Yes, you can!
+## API Endpoints
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `POST /api/summarize` - Summarize a YouTube video
+  - Body: `{ "url": "youtube_url" }`
+  - Returns: `{ "summary": "html_summary" }`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Project Structure
+
+```
+youtube-gpt-synthesizer/
+├── src/                    # React frontend source
+│   ├── components/        # React components
+│   ├── pages/            # Page components
+│   └── ...
+├── Backend/              # Flask backend
+│   ├── app.py           # Main Flask application
+│   ├── requirements.txt  # Python dependencies
+│   └── venv/            # Python virtual environment
+├── package.json          # Node.js dependencies
+└── vite.config.ts       # Vite configuration
+```
+
+## Development
+
+### Frontend Development
+- Built with React 18 + TypeScript
+- Styled with Tailwind CSS
+- Uses Vite for fast development
+- Includes shadcn/ui components
+
+### Backend Development
+- Flask-based REST API
+- OpenAI GPT-4 integration
+- SupaData for YouTube transcript extraction
+- CORS enabled for frontend communication
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"API key not found" error**:
+   - Ensure your `.env` file exists in the `Backend` directory
+   - Verify your API keys are correct
+
+2. **"Failed to fetch transcript" error**:
+   - Check your SupaData API key
+   - Ensure the YouTube video has available transcripts
+
+3. **CORS errors**:
+   - The Vite proxy should handle this automatically
+   - Ensure both servers are running on the correct ports
+
+4. **Port conflicts**:
+   - Backend runs on port 5055
+   - Frontend runs on port 8080
+   - Change ports in `app.py` and `vite.config.ts` if needed
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.

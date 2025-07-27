@@ -58,36 +58,39 @@ const Synthesiser = () => {
     });
   };
 
-  const mockSummarize = async (videoId: string, url: string): Promise<Summary> => {
-    // Simulate API calls with realistic delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const summaries = [
-      "This video explores the fundamentals of artificial intelligence, covering machine learning algorithms, neural networks, and their real-world applications in modern technology.",
-      "A comprehensive tutorial on React development, demonstrating component architecture, state management, and best practices for building scalable web applications.",
-      "An in-depth analysis of sustainable energy solutions, discussing solar power, wind energy, and the transition to renewable energy sources globally.",
-      "A detailed guide to personal finance management, covering budgeting strategies, investment principles, and long-term financial planning for individuals.",
-      "An exploration of space exploration history, from early missions to current Mars rover projects and future plans for lunar colonization."
-    ];
-    
-    const titles = [
-      "Understanding Artificial Intelligence",
-      "React Development Masterclass", 
-      "The Future of Renewable Energy",
-      "Personal Finance 101",
-      "Journey to the Stars"
-    ];
-    
-    const randomIndex = Math.floor(Math.random() * summaries.length);
-    
-    return {
-      id: Date.now().toString(),
-      videoId,
-      title: titles[randomIndex],
-      summary: summaries[randomIndex],
-      timestamp: new Date().toLocaleString(),
-      url
-    };
+  const summarizeVideo = async (videoId: string, url: string): Promise<Summary> => {
+    try {
+      const response = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to summarize video');
+      }
+
+      const data = await response.json();
+      
+      // Extract title from the summary HTML or use a default
+      const titleMatch = data.summary.match(/<h2[^>]*>([^<]+)<\/h2>/);
+      const title = titleMatch ? titleMatch[1] : 'Video Summary';
+      
+      return {
+        id: Date.now().toString(),
+        videoId,
+        title,
+        summary: data.summary,
+        timestamp: new Date().toLocaleString(),
+        url
+      };
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,7 +120,7 @@ const Synthesiser = () => {
 
     try {
       await simulateProgress();
-      const summary = await mockSummarize(videoId, url.trim());
+      const summary = await summarizeVideo(videoId, url.trim());
       
       setCurrentSummary(summary);
       
@@ -131,9 +134,10 @@ const Synthesiser = () => {
       });
       
     } catch (error) {
+      console.error('Error:', error);
       toast({
         title: "Error",
-        description: "Failed to summarize video. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to summarize video. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -242,9 +246,10 @@ const Synthesiser = () => {
                       </span>
                     </div>
                     <div className="prose prose-sm max-w-none">
-                      <p className="text-foreground/80 leading-relaxed text-sm m-0">
-                        {currentSummary.summary}
-                      </p>
+                      <div 
+                        className="text-foreground/80 leading-relaxed text-sm m-0"
+                        dangerouslySetInnerHTML={{ __html: currentSummary.summary }}
+                      />
                     </div>
                     <div className="pt-4 border-t border-border">
                       <a 
@@ -298,9 +303,10 @@ const Synthesiser = () => {
                             {summary.timestamp}
                           </span>
                         </div>
-                        <p className="text-xs text-foreground/70 leading-relaxed">
-                          {summary.summary}
-                        </p>
+                        <div 
+                          className="text-xs text-foreground/70 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: summary.summary }}
+                        />
                         <a 
                           href={summary.url}
                           target="_blank"
