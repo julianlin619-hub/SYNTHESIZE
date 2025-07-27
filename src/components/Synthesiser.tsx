@@ -163,7 +163,7 @@ const Synthesiser = () => {
             The Synthesiser
           </h1>
           <p className="text-foreground/70 text-base">
-            Transform YouTube videos into concise, intelligent summaries
+            Transform YouTube videos into concise and intelligent summaries
           </p>
         </div>
 
