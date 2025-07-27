@@ -6,7 +6,7 @@ export const getBackendUrl = (): string => {
   }
   
   // Fallback to localhost for development
-  return 'http://localhost:5000';
+  return 'http://localhost:5055';
 };
 
 export const API_ENDPOINTS = {
