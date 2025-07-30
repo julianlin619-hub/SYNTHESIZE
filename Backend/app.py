@@ -7,12 +7,13 @@ import tiktoken
 from dotenv import load_dotenv
 from markupsafe import Markup
 from openai import OpenAI  # ✅ New OpenAI SDK v1+
+from datetime import datetime
 
 # Load .env variables
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, origins=["*"], methods=["GET", "POST", "OPTIONS"])  # Enable CORS for all routes and origins
 
 # API Keys
 SUPADATA_API_KEY = os.getenv('SUPADATA_API_KEY')
@@ -301,37 +302,79 @@ def summary_to_html(summary_text):
 def index():
     return render_template('index.html')
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': str(datetime.now()),
+        'app_name': 'YouTube GPT Synthesizer Backend'
+    })
+
+@app.route('/api/test', methods=['GET'])
+def test():
+    return jsonify({
+        'status': 'ok', 
+        'message': 'Backend is working!',
+        'supadata_configured': bool(SUPADATA_API_KEY),
+        'openai_configured': bool(OPENAI_API_KEY),
+        'supadata_length': len(SUPADATA_API_KEY) if SUPADATA_API_KEY else 0,
+        'openai_length': len(OPENAI_API_KEY) if OPENAI_API_KEY else 0
+    })
+
 @app.route('/api/summarize', methods=['POST'])
 def summarize():
+    print(f"🔍 Received request: {request.method} {request.path}")
+    print(f"📋 Headers: {dict(request.headers)}")
+    print(f"📦 Content-Type: {request.content_type}")
+    
     # Check if API keys are configured
     if not SUPADATA_API_KEY:
+        print("❌ SupaData API key not configured")
         return jsonify({'error': 'SupaData API key not configured. Please set SUPADATA_API_KEY environment variable.'}), 500
     if not OPENAI_API_KEY:
+        print("❌ OpenAI API key not configured")
         return jsonify({'error': 'OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.'}), 500
     
-    data = request.json
+    try:
+        data = request.json
+        print(f"📄 Request data: {data}")
+    except Exception as e:
+        print(f"❌ JSON parse error: {e}")
+        return jsonify({'error': f'Invalid JSON: {str(e)}'}), 400
+    
     if not data:
+        print("❌ No JSON data provided")
         return jsonify({'error': 'No JSON data provided'}), 400
     
     url = data.get('url')
     if not url:
+        print("❌ No URL provided")
         return jsonify({'error': 'No URL provided'}), 400
     
     video_id = extract_video_id(url)
+    print(f"🎥 Extracted video ID: {video_id}")
     if not video_id:
+        print("❌ Invalid YouTube URL")
         return jsonify({'error': 'Invalid YouTube URL'}), 400
     
     try:
+        print("📝 Fetching transcript...")
         transcript = get_supadata_transcript(video_id)
+        print(f"✅ Transcript fetched, length: {len(transcript)} characters")
     except Exception as e:
+        print(f"❌ Transcript fetch error: {e}")
         return jsonify({'error': f'Could not fetch transcript: {str(e)}'}), 500
     
     try:
+        print("🤖 Generating summary...")
         summary = summarize_with_openai(transcript)
         summary_html = summary_to_html(summary)
+        print("✅ Summary generated successfully")
     except Exception as e:
+        print(f"❌ Summary generation error: {e}")
         return jsonify({'error': f'Could not summarize transcript: {str(e)}'}), 500
     
+    print("✅ Returning summary")
     return jsonify({'summary': str(summary_html)})
 
 # 8. Run on port 5050 to avoid macOS conflict

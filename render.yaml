@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: youtube-gpt-synthesizer-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r Backend/requirements.txt
+    startCommand: gunicorn Backend.app:app
+    rootDir: .
+    envVars:
+      - key: SUPADATA_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false 

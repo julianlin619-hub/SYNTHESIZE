@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Play, History, Loader2 } from 'lucide-react';
-import { getBackendUrl } from '@/config/api';
+import { getApiUrl } from '@/config';
 
 interface Summary {
   id: string;
@@ -61,7 +61,11 @@ const Synthesiser = () => {
 
   const summarizeVideo = async (videoId: string, url: string): Promise<Summary> => {
     try {
-      const response = await fetch(`${getBackendUrl()}/api/summarize`, {
+      const apiUrl = getApiUrl();
+      console.log('🌐 Using API URL:', apiUrl);
+      console.log('🔧 Environment:', import.meta.env.DEV ? 'development' : 'production');
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,21 +74,26 @@ const Synthesiser = () => {
       });
 
       if (!response.ok) {
+        console.log('❌ Response not OK:', response.status, response.statusText);
         // Try to parse as JSON first
         let errorMessage = 'Failed to summarize video';
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
+          console.log('📄 Error data:', errorData);
         } catch (jsonError) {
+          console.log('📄 JSON parse error:', jsonError);
           // If JSON parsing fails, try to get text content
           try {
             const textContent = await response.text();
+            console.log('📄 Response text:', textContent.substring(0, 200));
             if (textContent.includes('The page') || textContent.includes('Error')) {
               errorMessage = 'Backend server is not running or not accessible. Please make sure the backend is started on port 5055.';
             } else {
               errorMessage = `Server error: ${response.status} ${response.statusText}`;
             }
           } catch (textError) {
+            console.log('📄 Text parse error:', textError);
             errorMessage = `Server error: ${response.status} ${response.statusText}`;
           }
         }
@@ -107,6 +116,10 @@ const Synthesiser = () => {
       };
     } catch (error) {
       console.error('API Error:', error);
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.log('🌐 Network error - likely CORS or connectivity issue');
+        throw new Error('Network error: Unable to connect to the backend server. This might be a CORS issue or the server is not accessible.');
+      }
       throw error;
     }
   };
