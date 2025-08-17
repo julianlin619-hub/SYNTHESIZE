@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Retro Gaming Neon Theme */
+    --background: 220 13% 9%;
+    --foreground: 180 100% 90%;
+
+    --card: 220 13% 12%;
+    --card-foreground: 180 100% 90%;
+
+    --popover: 220 13% 12%;
+    --popover-foreground: 180 100% 90%;
+
+    --primary: 195 100% 50%;
+    --primary-foreground: 220 13% 9%;
+
+    --secondary: 320 100% 50%;
+    --secondary-foreground: 220 13% 9%;
+
+    --muted: 220 13% 20%;
+    --muted-foreground: 180 20% 70%;
+
+    --accent: 280 100% 70%;
+    --accent-foreground: 220 13% 9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 195 100% 50%;
+    --input: 220 13% 15%;
+    --ring: 195 100% 50%;
+
+    --radius: 0.5rem;
+
+    /* Neon specific colors */
+    --neon-blue: 195 100% 50%;
+    --neon-cyan: 180 100% 50%;
+    --neon-pink: 320 100% 50%;
+    --neon-purple: 280 100% 70%;
+    --neon-green: 120 100% 50%;
+    
+    /* Glow effects */
+    --glow-blue: 0 0 20px hsl(195 100% 50% / 0.5);
+    --glow-pink: 0 0 20px hsl(320 100% 50% / 0.5);
+    --glow-purple: 0 0 20px hsl(280 100% 70% / 0.5);
+    --glow-green: 0 0 20px hsl(120 100% 50% / 0.5);
+    
+    /* Text shadows for neon effect */
+    --text-glow-blue: 0 0 10px hsl(195 100% 50%), 0 0 20px hsl(195 100% 50%), 0 0 30px hsl(195 100% 50%);
+    --text-glow-pink: 0 0 10px hsl(320 100% 50%), 0 0 20px hsl(320 100% 50%), 0 0 30px hsl(320 100% 50%);
+    --text-glow-green: 0 0 10px hsl(120 100% 50%), 0 0 20px hsl(120 100% 50%), 0 0 30px hsl(120 100% 50%);
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Same as root for consistent neon theme */
+    --background: 220 13% 9%;
+    --foreground: 180 100% 90%;
+    --card: 220 13% 12%;
+    --card-foreground: 180 100% 90%;
+    --popover: 220 13% 12%;
+    --popover-foreground: 180 100% 90%;
+    --primary: 195 100% 50%;
+    --primary-foreground: 220 13% 9%;
+    --secondary: 320 100% 50%;
+    --secondary-foreground: 220 13% 9%;
+    --muted: 220 13% 20%;
+    --muted-foreground: 180 20% 70%;
+    --accent: 280 100% 70%;
+    --accent-foreground: 220 13% 9%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 195 100% 50%;
+    --input: 220 13% 15%;
+    --ring: 195 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Summary styling for better readability and larger titles */
+  .summary-heading {
+    @apply text-2xl md:text-3xl font-bold text-primary mb-4 mt-6;
+    text-shadow: 0 0 10px hsl(195 100% 50% / 0.5);
+  }
+  
+  .summary-section {
+    @apply mb-6;
+  }
+  
+  .summary-list {
+    @apply space-y-2 mb-4;
+  }
+  
+  .summary-item {
+    @apply text-foreground;
+  }
+}
