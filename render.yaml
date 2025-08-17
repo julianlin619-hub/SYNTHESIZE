@@ -4,10 +4,14 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r Backend/requirements.txt
-    startCommand: gunicorn Backend.app:app
+    startCommand: gunicorn Backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100
     rootDir: .
     envVars:
       - key: SUPADATA_API_KEY
         sync: false
       - key: OPENAI_API_KEY
-        sync: false 
+        sync: false
+      - key: FLASK_ENV
+        value: production
+    healthCheckPath: /health
+    autoDeploy: true 

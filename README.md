@@ -7,7 +7,7 @@ A modern web application that transforms YouTube videos into intelligent, detail
 - 🎥 **YouTube Video Processing**: Extract and process YouTube video transcripts
 - 🤖 **AI-Powered Summaries**: Generate detailed, structured summaries using OpenAI GPT-4
 - 📱 **Modern UI**: Beautiful, responsive interface built with React and Tailwind CSS
-- 💾 **History Management**: Save and view your previous summaries
+
 - ⚡ **Real-time Processing**: Live progress tracking during summarization
 
 ## Prerequisites
@@ -81,13 +81,80 @@ Use the provided startup script:
 2. **Paste a YouTube URL** in the input field
 3. **Click "Summarise"** to process the video
 4. **View the generated summary** with detailed insights
-5. **Access your history** to review previous summaries
+5. **View the generated summary** with detailed insights
 
 ## API Endpoints
 
+- `GET /health` - Health check endpoint
+  - Returns: `{ "status": "healthy", "timestamp": "...", "cors_origins": [...] }`
+- `GET /api/test` - API test endpoint
+  - Returns: `{ "status": "ok", "message": "...", "cors_origin": "..." }`
 - `POST /api/summarize` - Summarize a YouTube video
   - Body: `{ "url": "youtube_url" }`
   - Returns: `{ "summary": "html_summary" }`
+
+## CORS Configuration
+
+The backend is configured with specific CORS origins for security:
+
+**Allowed Origins:**
+- `http://localhost:8080` (Local development)
+- `http://localhost:3000` (Alternative local port)
+- `https://youtube-gpt-synthesizer.onrender.com` (Production backend)
+
+**CORS Headers:**
+- Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+- Headers: Content-Type, Authorization
+- Credentials: Disabled (no cookies needed)
+- Preflight Cache: 24 hours
+
+### Adding New Domains
+
+To add a new frontend domain (e.g., Vercel deployment):
+
+1. Update `Backend/app.py`:
+   ```python
+   ALLOWED_ORIGINS = {
+       "http://localhost:8080",
+       "https://your-app.vercel.app",  # Add your domain here
+       "https://www.your-app.vercel.app",
+   }
+   ```
+
+2. Redeploy the backend
+
+## Environment Variables
+
+**Backend (.env file):**
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `SUPADATA_API_KEY` - Your SupaData API key
+- `FLASK_ENV` - Set to 'production' for production deployment
+
+**Frontend:**
+- Automatically detects environment (dev/preview/prod)
+- Uses Vite proxy in development
+- Direct API calls in production
+
+## Testing
+
+### Integration Tests
+
+Run comprehensive integration tests:
+
+```bash
+# Test local backend
+npm run test:integration
+
+# Test specific endpoints
+npm run test:health
+npm run test:cors
+```
+
+### Manual Testing
+
+1. **Health Check**: `curl http://localhost:5055/health`
+2. **CORS Preflight**: `curl -X OPTIONS -H 'Origin: http://localhost:8080' http://localhost:5055/api/summarize`
+3. **API Test**: `curl http://localhost:5055/api/test`
 
 ## Project Structure
 
@@ -123,6 +190,31 @@ youtube-gpt-synthesizer/
 
 ### Common Issues
 
+**"Network error: Unable to connect to backend server"**
+
+1. **Check if backend is running**:
+   ```bash
+   curl http://localhost:5055/health
+   ```
+
+2. **Check port availability**:
+   ```bash
+   lsof -i :5055
+   ```
+
+3. **Restart both servers**:
+   ```bash
+   ./start.sh
+   ```
+
+**CORS Errors**
+
+1. **Verify origin is allowed** in `Backend/app.py`
+2. **Check browser console** for specific CORS messages
+3. **Ensure backend is accessible** from frontend origin
+
+**API Key Issues**
+
 1. **"API key not found" error**:
    - Ensure your `.env` file exists in the `Backend` directory
    - Verify your API keys are correct
@@ -131,14 +223,33 @@ youtube-gpt-synthesizer/
    - Check your SupaData API key
    - Ensure the YouTube video has available transcripts
 
-3. **CORS errors**:
-   - The Vite proxy should handle this automatically
-   - Ensure both servers are running on the correct ports
+**Port Conflicts**
 
-4. **Port conflicts**:
-   - Backend runs on port 5055
-   - Frontend runs on port 8080
-   - Change ports in `app.py` and `vite.config.ts` if needed
+- Backend runs on port 5055
+- Frontend runs on port 8080
+- Change ports in `app.py` and `vite.config.ts` if needed
+
+**Cold Start Issues (Render Free Tier)**
+
+- Backend may take 10-30 seconds to wake up
+- Frontend automatically retries with exponential backoff
+- Health check endpoint helps detect when backend is ready
+
+### Debug Mode
+
+Enable detailed logging:
+
+```bash
+cd Backend
+export FLASK_ENV=development
+python app.py
+```
+
+Check logs for:
+- Request/response details
+- CORS preflight requests
+- API key validation
+- Error details
 
 ## Contributing
 

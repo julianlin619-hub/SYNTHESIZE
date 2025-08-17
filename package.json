@@ -10,7 +10,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "backend": "cd Backend && source venv/bin/activate && python app.py",
-    "start": "concurrently \"npm run backend\" \"npm run dev\""
+    "start": "concurrently \"npm run backend\" \"npm run dev\"",
+    "test:integration": "node test-integration.js",
+    "test:health": "curl -s http://localhost:5055/health | jq .",
+    "test:cors": "curl -X OPTIONS -H 'Origin: http://localhost:8080' -H 'Access-Control-Request-Method: POST' http://localhost:5055/api/summarize -v"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

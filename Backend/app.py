@@ -8,12 +8,38 @@ from dotenv import load_dotenv
 from markupsafe import Markup
 from openai import OpenAI  # ✅ New OpenAI SDK v1+
 from datetime import datetime
+import logging
+import time
 
 # Load .env variables
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
-CORS(app, origins=["*"], methods=["GET", "POST", "OPTIONS"])  # Enable CORS for all routes and origins
+
+# Define allowed origins for CORS
+ALLOWED_ORIGINS = {
+    "http://localhost:8080",  # Local development
+    "http://localhost:3000",  # Alternative local port
+    "https://youtube-gpt-synthesizer.onrender.com",  # Production backend
+    # Add your Vercel frontend domains here when deployed
+    # "https://your-app.vercel.app",
+    # "https://www.your-app.vercel.app",
+}
+
+# Configure CORS with specific origins and proper headers
+CORS(
+    app,
+    origins=list(ALLOWED_ORIGINS),
+    supports_credentials=False,  # No cookies needed
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    expose_headers=["Content-Type"],
+    max_age=86400,  # Cache preflight for 24 hours
+)
 
 # API Keys
 SUPADATA_API_KEY = os.getenv('SUPADATA_API_KEY')
@@ -66,123 +92,75 @@ def get_supadata_transcript(video_id):
 # 3. Load summary prompt template
 
 def generate_summary_prompt(transcript_text):
-    template = """
-# Role
+    template = f"""
+# Role  
+You are a professional video content analyst with expertise in summarizing long-form YouTube transcripts by extracting key insights and detailed takeaways.
 
-You are a professional video content analyst with a strong background in media summarization. Your expertise lies in extracting key insights and detailed takeaways from long-form YouTube video transcripts.
+# Task  
+Summarize the following YouTube transcript using this process:
+1. Read the entire transcript.  
+2. Extract all key points, arguments, examples, and calls to action.  
+3. Preserve the original sequence while condensing for clarity.  
+4. Provide a **detailed summary** that captures the full informational value.  
+5. Use bullet points or short paragraphs for structure.
 
-# Task
+# Specifics  
+- This task transforms long YouTube videos into digestible formats for readers.  
+- Maintain a **neutral, informative tone** with no personal opinions.  
+- The summary should allow someone to grasp the **main points and flow** without watching.  
+- Be precise and avoid oversimplifying complex ideas.  
+- Prioritize clarity and completeness—**every major concept matters**.
 
-Summarize the following YouTube transcript by following this detailed process:
+# Context  
+We create written summaries of YouTube videos for busy audiences who prefer reading. Your role is vital to our brand’s credibility and user satisfaction.
 
-- **Carefully read** the entire transcript from start to finish.
-- **Identify and extract** all key points, including timestamps if mentioned, main arguments, examples, and calls to action.
-- **Preserve the original sequence** of ideas while condensing the content for clarity.
-- **Provide a detailed summary** that reflects the video’s full informational value without skipping or distorting critical points.
-- **Highlight notable quotes or phrases** where impactful.
-- **Use bullet points or short paragraphs** to structure the summary clearly.
+# Example  
+
+**Q**: Summarise this video: https://www.youtube.com/watch?v=BZOqDpZK7rw  
+**A**:
+
+## 🧠 Detailed Summary: How to Do a Mind Map the Right Way (vs. the Wrong Way)
+
+**Introduction: Wrong approaches include:**
+- Starting randomly and drawing chaotic connections.  
+- Creating tangled arrows without structure.  
+- Visually messy layouts that lack logical flow.   
 
 ---
 
-## Transcript
+## 📌 Basic Principles for Effective Mind Mapping
 
-```text
+### 1. Prioritize Clear, Logical Arrows  
+- Avoid arrows that weave around content in confusing ways.  
+- Convoluted paths are hard to remember—use **clear, direct arrows** that show logical progression.  
+- Even when zoomed out, the **overall direction and flow** should remain visible.  
+> “You’re going to remember an arrow that looks like this—super bold, really clear… the logic is preserved.”
+
+### 2. Don’t Overload the Page with Information  
+- Avoid writing too much—include only the **core ideas**.  
+- Leaving small gaps encourages **recall over recognition**, which is better for learning and revision.
+
+---
+
+## 📌 Key Takeaways  
+- Mind maps should be **logical, clear**, and reflect how you understand concepts—not just a collection of facts.  
+- Use **clear, direct arrows** to show the flow of ideas.
+
+
+# Notes  
+- Be specific and retain nuance.  
+- Use bullets or short paragraphs.  
+- Exclude opinions—only summarize what was said.  
+- Reflect the **structure, tone, and depth** of the original.  
+- If parts of the transcript are unclear, infer based on context.
+
+# Transcript to Summarize
 {transcript_text}
-```
-
----
-
-# Specifics
-
-- This task is vital for transforming long YouTube content into easily digestible formats for viewers.
-- Maintain a **neutral, informative tone** without injecting personal opinions.
-- The summary should be **thorough enough** that someone could understand the main points and flow of the video without watching it.
-- Please be **precise, methodical, and avoid oversimplifying** complex sections.
-- Aim for **clarity and completeness**—every major concept and subpoint matters.
-
-# Context
-
-We create high-quality written summaries of YouTube videos for busy audiences who prefer to read than watch. These summaries are used in newsletters, blogs, and social media captions. Your detailed and faithful summaries help our audience save time while still engaging with the core content. This role is essential to our brand’s credibility and user satisfaction.
-
-# Example
-
-**Q:** Summarize this transcript on how to build AI prompts
-
-**A:**
-
-**Bottom Line Up Front**
-
-This video teaches viewers how to move from basic conversational prompting (like using ChatGPT templates) to advanced single-shot prompt engineering that can replace hundreds of lines of code and create scalable AI systems worth thousands of dollars.
-
-**Main Premise: The Midwit Trap**
-
-- Left side (Low IQ): People who use ChatGPT casually
-- Middle (Midwit): Prompt engineers who rely on templates without deep understanding
-- Right side (Genius): Those who use research-backed prompting techniques
-
-**Key Quote:**
-
-> "Your ability to prompt them and provide instruction of these models directly impacts your ability to get value out of them."
-
-**Why Most People Are Bad at Prompt Engineering**
-
-- Conversational Prompting: Casual, multi-step human-in-the-loop approach
-- Single-Shot Prompting: Critical for automation, requires high precision
-- High Stakes: Single-shot skills lead to scalable, valuable AI systems
-- Karpathy Quote: "The hottest new programming language is English"
-- Core Thesis: "A well-written prompt can replace hundreds of lines of code"
-
-**The Perfect Prompt Formula (ROLE-TASK-SPECIFICS-CONTEXT-EXAMPLES-NOTES)**
-
-Each component is backed by academic research:
-
-- **ROLE:** Assign expert identity (+15–25% performance)
-- **TASK:** Use step-by-step instructions (up to 90% gain for complex problems)
-- **SPECIFICS:** Add emotional reinforcement (115% boost on complex tasks)
-- **CONTEXT:** Describe business/environment relevance
-- **EXAMPLES:** Few-shot examples improve accuracy from 10% to 60%
-- **NOTES:** Reminders at beginning or end avoid "Lost in the Middle" performance drops
-
-**Advanced Techniques**
-
-- Use markdown formatting for clarity
-- Choose appropriate model/temperature settings for cost and reliability
-- Break complex tasks into smaller steps for cheaper models
-- Positive phrasing and persona-based prompting improve results
-
-**Real-World Use Case**
-
-- Email classification system built from scratch
-- Before: One-sentence prompt
-- After: Full scientific prompt → 300%+ accuracy gain
-
-**Final Comparison**
-
-- Midwit: Template-only, expensive models, poor reliability
-- Genius: Research-based, optimized prompts, fast + affordable outputs
-
-**Key Takeaways**
-
-- Prompting is foundational to all AI use cases
-- A scientific approach yields better performance and business value
-- Avoiding this skill = less money, less value, lower impact
-
-**Final Quote:**
-
-> "If you don't take the time to actually soak in this information... you are not going to make any money in AI because everything depends on it."
-
-# Notes
-
-- Do not generalize; be specific and retain nuance.
-- Use bullet points or short paragraphs for readability.
-- Do not include opinions, only what was actually said in the video.
-- Your summary should reflect the true structure, tone, and depth of the original content.
-- If the transcript is fragmented or unclear, do your best to infer the intended message based on surrounding context.
     """
-    return template.format(transcript_text=transcript_text)
+    return template
 
 # 4. Estimate tokens
-def estimate_tokens(text, model="gpt-4.1"):
+def estimate_tokens(text, model="gpt-5"):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except Exception:
@@ -192,7 +170,7 @@ def estimate_tokens(text, model="gpt-4.1"):
 
 # 5. Summarize with OpenAI
 def summarize_with_openai(transcript_text):
-    model = "gpt-4.1"
+    model = "gpt-5"
     input_tokens = estimate_tokens(transcript_text, model=model)
     max_output_tokens = min(10000, input_tokens)
     prompt = generate_summary_prompt(transcript_text)
@@ -297,29 +275,79 @@ def summary_to_html(summary_text):
     html = f'<div class="summary-output">{html}</div>'
     return Markup(html)
 
-# 7. Flask routes
+# 7. Request logging middleware
+@app.before_request
+def log_request():
+    start_time = time.time()
+    request.start_time = start_time
+    
+    # Log request details
+    logger.info(f"Request: {request.method} {request.path}")
+    logger.info(f"Origin: {request.headers.get('Origin', 'No Origin')}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    
+    # Log CORS preflight requests specifically
+    if request.method == 'OPTIONS':
+        logger.info("CORS preflight request detected")
+
+@app.after_request
+def log_response(response):
+    # Calculate request duration
+    duration = time.time() - getattr(request, 'start_time', time.time())
+    
+    # Log response details
+    logger.info(f"Response: {response.status_code} - {duration:.3f}s")
+    
+    # Add Vary header for CORS
+    if 'Origin' in request.headers:
+        response.headers['Vary'] = 'Origin'
+    
+    return response
+
+# 8. Flask routes
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/health', methods=['GET'])
 def health():
+    """Health check endpoint for liveness probes and connection testing"""
     return jsonify({
         'status': 'healthy',
         'timestamp': str(datetime.now()),
-        'app_name': 'YouTube GPT Synthesizer Backend'
+        'app_name': 'YouTube GPT Synthesizer Backend',
+        'cors_origins': list(ALLOWED_ORIGINS),
+        'environment': os.getenv('FLASK_ENV', 'production')
     })
 
 @app.route('/api/test', methods=['GET'])
 def test():
+    """Test endpoint to verify API functionality and CORS"""
+    origin = request.headers.get('Origin')
+    logger.info(f"Test endpoint called from origin: {origin}")
+    
     return jsonify({
         'status': 'ok', 
         'message': 'Backend is working!',
         'supadata_configured': bool(SUPADATA_API_KEY),
         'openai_configured': bool(OPENAI_API_KEY),
         'supadata_length': len(SUPADATA_API_KEY) if SUPADATA_API_KEY else 0,
-        'openai_length': len(OPENAI_API_KEY) if OPENAI_API_KEY else 0
+        'openai_length': len(OPENAI_API_KEY) if OPENAI_API_KEY else 0,
+        'cors_origin': origin,
+        'allowed_origins': list(ALLOWED_ORIGINS)
     })
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors with CORS headers"""
+    logger.warning(f"404 error for path: {request.path}")
+    return jsonify({'error': 'Not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors with CORS headers"""
+    logger.error(f"500 error: {error}")
+    return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/summarize', methods=['POST'])
 def summarize():
@@ -377,6 +405,21 @@ def summarize():
     print("✅ Returning summary")
     return jsonify({'summary': str(summary_html)})
 
-# 8. Run on port 5050 to avoid macOS conflict
+# 8. Run on port 5055 to match Vite proxy configuration
 if __name__ == '__main__':
-    app.run(debug=False, port=5055)
+    print("🚀 Starting YouTube GPT Synthesizer Backend...")
+    print(f"📍 Server will be available at: http://localhost:5055")
+    print(f"🔑 SupaData API Key: {'✅ Configured' if SUPADATA_API_KEY else '❌ Missing'}")
+    print(f"🔑 OpenAI API Key: {'✅ Configured' if OPENAI_API_KEY else '❌ Missing'}")
+    print("🌐 CORS enabled for all origins")
+    print("=" * 50)
+    
+    try:
+        app.run(debug=False, port=5055, host='0.0.0.0')
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print(f"❌ Port 5055 is already in use. Please stop any other services using this port.")
+            print(f"💡 You can check what's using the port with: lsof -i :5055")
+        else:
+            print(f"❌ Failed to start server: {e}")
+        exit(1)

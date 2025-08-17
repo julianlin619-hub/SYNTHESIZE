@@ -14,13 +14,46 @@ fi
 # Start backend server
 echo "🔧 Starting backend server on port 5055..."
 cd Backend
+
+# Check if virtual environment exists
+if [ ! -d "venv" ]; then
+    echo "❌ Virtual environment not found. Creating one..."
+    python3 -m venv venv
+fi
+
 source venv/bin/activate
+
+# Install/update requirements
+echo "📦 Installing/updating Python dependencies..."
+pip install -r requirements.txt
+
+# Check if port 5055 is already in use
+if lsof -Pi :5055 -sTCP:LISTEN -t >/dev/null ; then
+    echo "⚠️  Port 5055 is already in use. Stopping existing process..."
+    lsof -ti:5055 | xargs kill -9
+    sleep 2
+fi
+
+echo "🚀 Starting backend server..."
 python app.py &
 BACKEND_PID=$!
 cd ..
 
-# Wait a moment for backend to start
-sleep 3
+# Wait for backend to be ready
+echo "⏳ Waiting for backend to be ready..."
+for i in {1..30}; do
+    if curl -s http://localhost:5055/health >/dev/null 2>&1; then
+        echo "✅ Backend is ready!"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "❌ Backend failed to start within 30 seconds"
+        kill $BACKEND_PID 2>/dev/null
+        exit 1
+    fi
+    echo "⏳ Attempt $i/30..."
+    sleep 1
+done
 
 # Start frontend server
 echo "🌐 Starting frontend server on port 8080..."
