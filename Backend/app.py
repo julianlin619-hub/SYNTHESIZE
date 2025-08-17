@@ -22,8 +22,9 @@ app = Flask(__name__)
 
 # Define allowed origins for CORS
 ALLOWED_ORIGINS = {
-    "http://localhost:8080",  # Local development
+    "http://localhost:8080",  # Frontend dev server
     "http://localhost:3000",  # Alternative local port
+    "http://localhost:5173",  # Vite default port
     "https://youtube-gpt-synthesizer.onrender.com",  # Production backend
     # Add your Vercel frontend domains here when deployed
     # "https://your-app.vercel.app",
@@ -93,68 +94,100 @@ def get_supadata_transcript(video_id):
 
 def generate_summary_prompt(transcript_text):
     template = f"""
-# Role  
+👨‍💼 **Role**
+
 You are a professional video content analyst with expertise in summarizing long-form YouTube transcripts by extracting key insights and detailed takeaways.
 
-# Task  
+---
+
+🎯 **Task**
+
 Summarize the following YouTube transcript using this process:
-1. Read the entire transcript.  
-2. Extract all key points, arguments, examples, and calls to action.  
-3. Preserve the original sequence while condensing for clarity.  
-4. Provide a **detailed summary** that captures the full informational value.  
-5. Use bullet points or short paragraphs for structure.
 
-# Specifics  
-- This task transforms long YouTube videos into digestible formats for readers.  
-- Maintain a **neutral, informative tone** with no personal opinions.  
-- The summary should allow someone to grasp the **main points and flow** without watching.  
-- Be precise and avoid oversimplifying complex ideas.  
-- Prioritize clarity and completeness—**every major concept matters**.
+1. **Read the entire transcript**
+2. **Extract all key points, arguments, examples, and calls to action**
+3. **Preserve the original sequence while condensing for clarity**
+4. **Provide a detailed summary** that captures the full informational value
+5. **Use bullet points or short paragraphs** for structure
 
-# Context  
-We create written summaries of YouTube videos for busy audiences who prefer reading. Your role is vital to our brand’s credibility and user satisfaction.
+⚠️ **CRITICAL FORMATTING REQUIREMENTS:**
+• **ALWAYS** use bullet points (•) for lists, never indented text
+• **ALWAYS** use bold formatting (**text**) for key concepts and important terms
+• **ALWAYS** add emojis to section headers (🎯, 📌, 🧠, etc.)
+• **ALWAYS** use clear section breaks with --- separators
+• **NEVER** use dense paragraphs or indented text without bullets
 
-# Example  
+---
 
-**Q**: Summarise this video: https://www.youtube.com/watch?v=BZOqDpZK7rw  
+🛠️ **Specifics**
+
+• This task transforms long YouTube videos into digestible formats for readers
+• Maintain a **neutral, informative tone** with no personal opinions
+• The summary should allow someone to grasp the **main points and flow** without watching
+• Be precise and avoid oversimplifying complex ideas
+• Prioritize clarity and completeness—**every major concept matters**
+
+---
+
+🧠 **Context**
+
+We create written summaries of YouTube videos for busy audiences who prefer reading. Your role is vital to our brand's credibility and user satisfaction.
+
+---
+
+📋 **Example**
+
+**Q**: Summarise this video: https://www.youtube.com/watch?v=BZOqDpZK7rw
+
 **A**:
 
-## 🧠 Detailed Summary: How to Do a Mind Map the Right Way (vs. the Wrong Way)
+🧠 **Detailed Summary: How to Do a Mind Map the Right Way (vs. the Wrong Way)**
 
 **Introduction: Wrong approaches include:**
-- Starting randomly and drawing chaotic connections.  
-- Creating tangled arrows without structure.  
-- Visually messy layouts that lack logical flow.   
+• Starting randomly and drawing chaotic connections
+• Creating tangled arrows without structure
+• Visually messy layouts that lack logical flow
 
 ---
 
-## 📌 Basic Principles for Effective Mind Mapping
+📌 **Basic Principles for Effective Mind Mapping**
 
-### 1. Prioritize Clear, Logical Arrows  
-- Avoid arrows that weave around content in confusing ways.  
-- Convoluted paths are hard to remember—use **clear, direct arrows** that show logical progression.  
-- Even when zoomed out, the **overall direction and flow** should remain visible.  
-> “You’re going to remember an arrow that looks like this—super bold, really clear… the logic is preserved.”
+**1. Prioritize Clear, Logical Arrows**
+• Avoid arrows that weave around content in confusing ways
+• Convoluted paths are hard to remember—use **clear, direct arrows** that show logical progression
+• Even when zoomed out, the **overall direction and flow** should remain visible
 
-### 2. Don’t Overload the Page with Information  
-- Avoid writing too much—include only the **core ideas**.  
-- Leaving small gaps encourages **recall over recognition**, which is better for learning and revision.
+> *"You're going to remember an arrow that looks like this—super bold, really clear… the logic is preserved."*
+
+**2. Don't Overload the Page with Information**
+• Avoid writing too much—include only the **core ideas**
+• Leaving small gaps encourages **recall over recognition**, which is better for learning and revision
 
 ---
 
-## 📌 Key Takeaways  
-- Mind maps should be **logical, clear**, and reflect how you understand concepts—not just a collection of facts.  
-- Use **clear, direct arrows** to show the flow of ideas.
+🎯 **Key Takeaways**
 
+• Mind maps should be **logical, clear**, and reflect how you understand concepts—not just a collection of facts
+• Use **clear, direct arrows** to show the flow of ideas
 
-# Notes  
-- Be specific and retain nuance.  
-- Use bullets or short paragraphs.  
-- Exclude opinions—only summarize what was said.  
-- Reflect the **structure, tone, and depth** of the original.  
-- If parts of the transcript are unclear, infer based on context.
+---
 
-# Transcript to Summarize
+📝 **IMPORTANT: Your output MUST look exactly like this example format!**
+
+---
+
+📝 **Notes**
+
+• Be specific and retain nuance
+• Use bullets or short paragraphs
+• Exclude opinions—only summarize what was said
+• Reflect the **structure, tone, and depth** of the original
+• If parts of the transcript are unclear, infer based on context
+
+---
+
+📄 **Transcript to Summarize**
+
 {transcript_text}
     """
     return template
@@ -178,11 +211,10 @@ def summarize_with_openai(transcript_text):
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": "You summarize long YouTube transcripts professionally."},
+            {"role": "system", "content": "You summarize long YouTube transcripts professionally. You MUST follow the exact formatting instructions provided in the user prompt, including bullet points, bold text, emojis, and clear section breaks."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=max_output_tokens,
-        temperature=0.01,
+        max_completion_tokens=max_output_tokens,
     )
     return response.choices[0].message.content.strip()
 
