@@ -22,6 +22,9 @@ const YouTubeSynthesiser = () => {
     try {
       setStatus("Fetching transcript...");
       
+      console.log("🔍 Starting fetch request to:", 'http://localhost:5055/api/summarize');
+      console.log("📋 Request payload:", { url: url.trim() });
+      
       const response = await fetch('http://localhost:5055/api/summarize', {
         method: 'POST',
         headers: {
@@ -30,17 +33,24 @@ const YouTubeSynthesiser = () => {
         body: JSON.stringify({ url: url.trim() })
       });
       
+      console.log("✅ Response received:", response);
+      console.log("📊 Response status:", response.status);
+      console.log("🔑 Response headers:", Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.log("❌ Error response:", errorData);
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
       
       setStatus("Generating summary...");
       const data = await response.json();
+      console.log("📄 Response data:", data);
       
       setSummary(data.summary);
       setStatus("Synthesis complete!");
     } catch (err) {
+      console.error("💥 Fetch error:", err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
       setStatus("Synthesis failed");
@@ -126,7 +136,7 @@ const YouTubeSynthesiser = () => {
               <div className="p-6 bg-primary/5 border border-primary/20 rounded-lg">
                 <h3 className="text-lg font-semibold text-primary mb-3">Generated Summary</h3>
                 <div 
-                  className="prose prose-invert max-w-none text-foreground"
+                  className="prose prose-invert max-w-none text-foreground [&_.summary-heading]:text-2xl [&_.summary-heading]:font-bold [&_.summary-heading]:text-blue-400 [&_.summary-heading]:mb-3 [&_.summary-heading]:mt-6 [&_.summary-heading]:text-shadow-lg [&_.summary-heading]:text-shadow-blue-500/30 [&_.summary-section]:mb-6 [&_.summary-list]:mt-2 [&_.summary-list]:mb-4 [&_.summary-item]:mb-1 [&_.summary-item]:text-sm [&_.summary-paragraph]:mb-3 [&_strong]:text-yellow-400 [&_strong]:font-semibold"
                   dangerouslySetInnerHTML={{ __html: summary }}
                 />
               </div>

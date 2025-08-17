@@ -23,6 +23,7 @@ app = Flask(__name__)
 # Define allowed origins for CORS
 ALLOWED_ORIGINS = {
     "http://localhost:8080",  # Frontend dev server
+    "http://localhost:8081",  # Frontend dev server (alternative port)
     "http://localhost:3000",  # Alternative local port
     "http://localhost:5173",  # Vite default port
     "https://youtube-gpt-synthesizer.onrender.com",  # Production backend
