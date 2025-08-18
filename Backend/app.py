@@ -20,31 +20,39 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Define allowed origins for CORS
-FRONTEND_ORIGINS = os.getenv("FRONTEND_ORIGINS", "").split(",")
-ALLOWED_ORIGINS = set([
-    # Development origins
-    "http://localhost:8080",  # Frontend dev server
-    "http://localhost:8081",  # Frontend dev server (alternative port)
-    "http://localhost:3000",  # Alternative local port
-    "http://localhost:5173",  # Vite default port
-    # Production origins
-    "https://youtube-gpt-synthesizer-backend.onrender.com",  # Production backend
-    "https://*.vercel.app",  # Vercel frontend domains
-    # Add custom domains from environment
-    *[o.strip() for o in FRONTEND_ORIGINS if o.strip()]
-])
+# Build allowed patterns
+FRONTEND_ORIGINS = os.getenv("FRONTEND_ORIGINS", "")
+extra = [o.strip() for o in FRONTEND_ORIGINS.split(",") if o.strip()]
 
-# Configure CORS with specific origins and proper headers
+# Regex allows any vercel domain for our app
+VERCELOPT = re.compile(r"^https://[a-z0-9-]+\.vercel\.app$")
+PROD_FRONTENDS = extra + ["https://youtube-gpt-synthesizer.vercel.app"]  # add custom if used
+
+def cors_origin_validator(origin):
+    if not origin:
+        return False
+    if origin in PROD_FRONTENDS:
+        return True
+    if VERCELOPT.match(origin):
+        return True
+    return origin.startswith("http://localhost")
+
+# Configure CORS with regex origin matching
 CORS(
     app,
-    origins=list(ALLOWED_ORIGINS),
-    supports_credentials=False,  # No cookies needed
+    origins=cors_origin_validator,
+    supports_credentials=False,
     allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
     expose_headers=["Content-Type"],
-    max_age=86400,  # Cache preflight for 24 hours
+    max_age=86400,
 )
+
+@app.after_request
+def after_request(response):
+    """Set CORS headers after each request"""
+    response.headers.add('Vary', 'Origin')
+    return response
 
 # API Keys
 SUPADATA_API_KEY = os.getenv('SUPADATA_API_KEY')
@@ -557,7 +565,8 @@ def health():
         'status': 'healthy',
         'timestamp': str(datetime.now()),
         'app_name': 'YouTube GPT Synthesizer Backend',
-        'cors_origins': list(ALLOWED_ORIGINS),
+        'cors_origins': list(PROD_FRONTENDS),
+        'cors_regex_pattern': '^https://[a-z0-9-]+\\.vercel\\.app$',
         'environment': os.getenv('FLASK_ENV', 'production')
     })
 
@@ -566,6 +575,7 @@ def version():
     """Version endpoint for deployment verification and debugging"""
     return jsonify({
         'version': '1.0.0',
+        'commit': os.getenv("RENDER_GIT_COMMIT", ""),
         'deployment_time': str(datetime.now()),
         'environment': os.getenv('FLASK_ENV', 'production'),
         'port': os.getenv('PORT', '5055'),
@@ -582,6 +592,7 @@ def test():
     """Test endpoint to verify API functionality and CORS"""
     origin = request.headers.get('Origin')
     logger.info(f"Test endpoint called from origin: {origin}")
+    print(f"🌐 Test endpoint called from origin: {origin}")
     
     return jsonify({
         'status': 'ok', 
@@ -591,7 +602,7 @@ def test():
         'supadata_length': len(SUPADATA_API_KEY) if SUPADATA_API_KEY else 0,
         'openai_length': len(OPENAI_API_KEY) if OPENAI_API_KEY else 0,
         'cors_origin': origin,
-        'allowed_origins': list(ALLOWED_ORIGINS)
+        'allowed_origins': list(PROD_FRONTENDS)
     })
 
 @app.errorhandler(404)
@@ -613,6 +624,7 @@ def summarize():
     print(f"📋 Headers: {dict(request.headers)}")
     print(f"📦 Content-Type: {request.content_type}")
     print(f"🌐 Origin: {request.headers.get('Origin', 'Unknown')}")
+    print(f"🌐 Origin validation: {cors_origin_validator(request.headers.get('Origin', ''))}")
     
     # Check if API keys are configured
     if not SUPADATA_API_KEY:

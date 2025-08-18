@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NeonCard, NeonCardContent, NeonCardDescription, NeonCardHeader, NeonCardTitle } from "@/components/ui/neon-card";
 import { NeonInput } from "@/components/ui/neon-input";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -13,11 +13,39 @@ const YouTubeSynthesiser = () => {
 
   // Get API base URL from environment variables
   const getApiBaseUrl = () => {
-    // In production, use VITE_API_BASE_URL, fallback to localhost for development
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055';
+    // In production, use NEXT_PUBLIC_API_BASE_URL, fallback to localhost for development
+    const baseUrl = import.meta.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5055';
     console.log("🔧 API Base URL:", baseUrl);
     return baseUrl;
   };
+
+  // Test API connectivity
+  const testApiConnection = async () => {
+    try {
+      const apiBaseUrl = getApiBaseUrl();
+      const response = await fetch(`${apiBaseUrl}/health`, {
+        method: 'GET',
+        mode: 'cors',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ API Health Check Success:", data);
+        return true;
+      } else {
+        console.error("❌ API Health Check Failed:", response.status);
+        return false;
+      }
+    } catch (err) {
+      console.error("❌ API Health Check Error:", err);
+      return false;
+    }
+  };
+
+  // Test API on component mount
+  useEffect(() => {
+    testApiConnection();
+  }, []);
 
   const handleSummarise = async () => {
     if (!url.trim()) return;
