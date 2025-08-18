@@ -37,10 +37,10 @@ def cors_origin_validator(origin):
         return True
     return origin.startswith("http://localhost")
 
-# Configure CORS with regex origin matching
+# Configure CORS with proper origin handling
 CORS(
     app,
-    origins=cors_origin_validator,
+    origins=PROD_FRONTENDS + ["http://localhost:8080", "http://localhost:5173"],
     supports_credentials=False,
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
@@ -50,8 +50,21 @@ CORS(
 
 @app.after_request
 def after_request(response):
-    """Set CORS headers after each request"""
+    """Set CORS headers after each request with custom origin validation"""
+    origin = request.headers.get('Origin')
+    
+    # Check if origin is allowed
+    if origin:
+        if origin in PROD_FRONTENDS or origin.startswith("http://localhost"):
+            response.headers.add('Access-Control-Allow-Origin', origin)
+        elif VERCELOPT.match(origin):
+            response.headers.add('Access-Control-Allow-Origin', origin)
+    
     response.headers.add('Vary', 'Origin')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Max-Age', '86400')
+    
     return response
 
 # API Keys
@@ -603,6 +616,23 @@ def test():
         'openai_length': len(OPENAI_API_KEY) if OPENAI_API_KEY else 0,
         'cors_origin': origin,
         'allowed_origins': list(PROD_FRONTENDS)
+    })
+
+@app.route('/cors-test', methods=['GET', 'OPTIONS'])
+def cors_test():
+    """Test endpoint to verify CORS is working correctly"""
+    if request.method == 'OPTIONS':
+        # Handle preflight request
+        response = jsonify({'status': 'preflight'})
+        return response
+    
+    origin = request.headers.get('Origin')
+    return jsonify({
+        'status': 'ok',
+        'message': 'CORS test successful',
+        'origin': origin,
+        'allowed_origins': PROD_FRONTENDS,
+        'vercel_pattern': '^https://[a-z0-9-]+\\.vercel\\.app$'
     })
 
 @app.errorhandler(404)
