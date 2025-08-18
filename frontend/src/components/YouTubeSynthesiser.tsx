@@ -16,7 +16,6 @@ const YouTubeSynthesiser = () => {
   const testApiConnection = async () => {
     try {
       const data = await health();
-      console.log("✅ API Health Check Success:", data);
       return true;
     } catch (err) {
       console.error("❌ API Health Check Error:", err);
@@ -52,10 +51,7 @@ const YouTubeSynthesiser = () => {
     try {
       setStatus("Fetching transcript...");
       
-      console.log("🔍 Starting summarize request for URL:", trimmedUrl);
-      
       const data = await summarize(trimmedUrl);
-      console.log("📄 Response data:", data);
       
       setSummary(data.summary);
       setStatus("Synthesis complete!");

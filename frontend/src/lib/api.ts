@@ -4,9 +4,7 @@ const API_BASE =
   import.meta.env.NEXT_PUBLIC_API_BASE_URL ||       // older fallback
   'http://localhost:5055';
 
-// TEMP debug: remove after verification
-// eslint-disable-next-line no-console
-console.log('API_BASE =', API_BASE);
+
 
 export async function summarize(url: string) {
   const res = await fetch(`${API_BASE}/api/summarize`, {
