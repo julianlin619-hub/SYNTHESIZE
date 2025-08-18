@@ -136,7 +136,7 @@ const YouTubeSynthesiser = () => {
               <div className="p-6 bg-primary/5 border border-primary/20 rounded-lg">
                 <h3 className="text-lg font-semibold text-primary mb-3">Generated Summary</h3>
                 <div 
-                  className="prose prose-invert max-w-none text-foreground [&_.summary-heading]:text-2xl [&_.summary-heading]:font-bold [&_.summary-heading]:text-blue-400 [&_.summary-heading]:mb-3 [&_.summary-heading]:mt-6 [&_.summary-heading]:text-shadow-lg [&_.summary-heading]:text-shadow-blue-500/30 [&_.summary-section]:mb-6 [&_.summary-list]:mt-2 [&_.summary-list]:mb-4 [&_.summary-item]:mb-1 [&_.summary-item]:text-sm [&_.summary-paragraph]:mb-3 [&_strong]:text-yellow-400 [&_strong]:font-semibold"
+                  className="prose prose-invert max-w-none text-foreground [&_.summary-heading]:text-blue-400 [&_.summary-heading]:text-shadow-lg [&_.summary-heading]:text-shadow-blue-500/30 [&_.summary-section]:mb-8 [&_.summary-list]:mt-3 [&_.summary-list]:mb-6 [&_.summary-item]:mb-2 [&_.summary-item]:text-sm [&_.summary-paragraph]:mb-3 [&_strong]:text-yellow-400 [&_strong]:font-semibold"
                   dangerouslySetInnerHTML={{ __html: summary }}
                 />
               </div>

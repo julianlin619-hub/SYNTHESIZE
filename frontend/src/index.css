@@ -104,16 +104,18 @@ All colors MUST be HSL.
 @layer components {
   /* Summary styling for better readability and larger titles */
   .summary-heading {
-    @apply text-2xl md:text-3xl font-bold text-primary mb-4 mt-6;
+    @apply text-2xl md:text-3xl lg:text-4xl font-bold text-primary mb-6 mt-8;
     text-shadow: 0 0 10px hsl(195 100% 50% / 0.5);
+    font-size: 1.5rem; /* Ensure minimum size of 1.5rem */
+    line-height: 1.3;
   }
   
   .summary-section {
-    @apply mb-6;
+    @apply mb-8;
   }
   
   .summary-list {
-    @apply space-y-2 mb-4;
+    @apply space-y-3 mb-6;
   }
   
   .summary-item {

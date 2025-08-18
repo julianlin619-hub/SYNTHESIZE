@@ -47,6 +47,14 @@ CORS(
 SUPADATA_API_KEY = os.getenv('SUPADATA_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
+# OpenAI API Configuration - Centralized for easy maintenance
+OPENAI_CONFIG = {
+    'model': 'gpt-5',
+    'max_completion_tokens': 10000,  # ✅ Updated parameter name for API compatibility
+    'temperature': 0.7,
+    'system_prompt': "You summarize long YouTube transcripts professionally. You MUST follow the exact formatting instructions provided in the user prompt, including bullet points, bold text, emojis, and clear section breaks."
+}
+
 # Validate required environment variables
 if not SUPADATA_API_KEY:
     print("ERROR: SUPADATA_API_KEY environment variable is not set!")
@@ -57,6 +65,32 @@ if not OPENAI_API_KEY:
 
 if not SUPADATA_API_KEY or not OPENAI_API_KEY:
     print("Missing required API keys. The application may not work properly.")
+
+# Validate OpenAI configuration
+def validate_openai_config():
+    """Validate OpenAI API configuration and test basic connectivity"""
+    try:
+        # Test API key validity with a simple request
+        test_response = client.chat.completions.create(
+            model=OPENAI_CONFIG['model'],
+            messages=[{"role": "user", "content": "Hello"}],
+            max_completion_tokens=10
+        )
+        print(f"✅ OpenAI API configuration validated successfully")
+        return True
+    except Exception as e:
+        error_msg = str(e)
+        if "max_tokens" in error_msg and "unsupported" in error_msg:
+            print("⚠️  Warning: max_tokens parameter not supported, using max_completion_tokens")
+            # Update config to use supported parameter
+            OPENAI_CONFIG['max_completion_tokens'] = OPENAI_CONFIG.get('max_completion_tokens', 10000)
+        elif "max_completion_tokens" in error_msg and "unsupported" in error_msg:
+            print("⚠️  Warning: max_completion_tokens parameter not supported, removing token limit")
+            OPENAI_CONFIG.pop('max_completion_tokens', None)
+        else:
+            print(f"❌ OpenAI API configuration error: {error_msg}")
+            return False
+        return True
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -78,22 +112,122 @@ def extract_video_id(url):
             return match.group(1)
     return None
 
-# 2. Fetch transcript from SupaData
+# 2. Fetch transcript from SupaData with comprehensive validation
 def get_supadata_transcript(video_id):
+    """
+    Fetch transcript from SupaData with comprehensive validation and error handling.
+    Returns validated transcript text or raises descriptive exceptions.
+    """
+    print(f"🔍 Fetching transcript for video ID: {video_id}")
+    
     url = f'https://api.supadata.ai/v1/youtube/transcript?videoId={video_id}'
     headers = {'x-api-key': SUPADATA_API_KEY}
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        print("SupaData error:", response.text)
-        raise Exception(f'SupaData API error: {response.text}')
-    data = response.json()
-    if 'content' not in data:
-        raise Exception('Transcript not found in SupaData response')
-    return ' '.join([entry['text'] for entry in data['content']])
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        print(f"📡 SupaData API response status: {response.status_code}")
+        
+        if response.status_code != 200:
+            error_text = response.text
+            print(f"❌ SupaData API error (HTTP {response.status_code}): {error_text}")
+            
+            # Provide user-friendly error messages based on status codes
+            if response.status_code == 401:
+                raise Exception("Authentication failed: Please check your SupaData API key")
+            elif response.status_code == 404:
+                raise Exception("Video transcript not found: This video may not have captions or transcripts available")
+            elif response.status_code == 429:
+                raise Exception("Rate limit exceeded: Please try again later")
+            elif response.status_code >= 500:
+                raise Exception("SupaData service temporarily unavailable: Please try again later")
+            else:
+                raise Exception(f"SupaData API error: {error_text}")
+        
+        # Parse JSON response
+        try:
+            data = response.json()
+            print(f"📄 SupaData response keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+        except Exception as json_error:
+            print(f"❌ Failed to parse SupaData JSON response: {json_error}")
+            print(f"📄 Raw response: {response.text[:500]}...")
+            raise Exception("Invalid response from transcript service")
+        
+        # Validate response structure
+        if not isinstance(data, dict):
+            raise Exception("Invalid response format from transcript service")
+        
+        if 'content' not in data:
+            print(f"❌ Missing 'content' key in SupaData response")
+            print(f"📄 Available keys: {list(data.keys())}")
+            print(f"📄 Response preview: {str(data)[:500]}...")
+            raise Exception("Transcript content not found in response")
+        
+        content = data['content']
+        if not content or not isinstance(content, list):
+            print(f"❌ Invalid content format: {type(content)}")
+            raise Exception("Transcript content is empty or invalid")
+        
+        # Extract and validate transcript text
+        transcript_parts = []
+        for i, entry in enumerate(content):
+            if not isinstance(entry, dict) or 'text' not in entry:
+                print(f"⚠️  Skipping invalid entry {i}: {entry}")
+                continue
+            
+            text = entry.get('text', '').strip()
+            if text:  # Only add non-empty text
+                transcript_parts.append(text)
+        
+        if not transcript_parts:
+            print("❌ No valid transcript text found in response")
+            raise Exception("This video has no available transcript or captions")
+        
+        # Join transcript parts and validate final result
+        transcript_text = ' '.join(transcript_parts)
+        print(f"✅ Transcript assembled successfully")
+        print(f"📊 Transcript parts: {len(transcript_parts)}")
+        print(f"📏 Total transcript length: {len(transcript_text)} characters")
+        print(f"📝 Transcript preview: {transcript_text[:200]}...")
+        
+        # Final validation
+        if len(transcript_text.strip()) < 50:  # Minimum reasonable transcript length
+            print(f"⚠️  Warning: Transcript seems very short ({len(transcript_text)} chars)")
+            print(f"📝 Full transcript: {transcript_text}")
+        
+        return transcript_text
+        
+    except requests.exceptions.Timeout:
+        print("❌ SupaData API request timed out")
+        raise Exception("Transcript service request timed out. Please try again.")
+    except requests.exceptions.RequestException as req_error:
+        print(f"❌ Network error fetching transcript: {req_error}")
+        raise Exception(f"Network error: {str(req_error)}")
+    except Exception as e:
+        # Re-raise our custom exceptions
+        raise e
 
 # 3. Load summary prompt template
 
 def generate_summary_prompt(transcript_text):
+    """
+    Generate a comprehensive summary prompt with input validation.
+    Ensures the transcript is properly formatted and the prompt is complete.
+    """
+    # Validate transcript input
+    if not transcript_text or not isinstance(transcript_text, str):
+        raise ValueError("Transcript text must be a non-empty string")
+    
+    transcript_text = transcript_text.strip()
+    if len(transcript_text) < 10:
+        raise ValueError("Transcript text is too short to generate a meaningful summary")
+    
+    print(f"🔧 Generating prompt for transcript length: {len(transcript_text)} characters")
+    print(f"🔧 Transcript preview: {transcript_text[:200]}...")
+    
+    # Clean and prepare transcript text
+    # Remove excessive whitespace and normalize line breaks
+    cleaned_transcript = re.sub(r'\s+', ' ', transcript_text).strip()
+    
     template = f"""
 👨‍💼 **Role**
 
@@ -105,7 +239,7 @@ You are a professional video content analyst with expertise in summarizing long-
 
 Summarize the following YouTube transcript using this process:
 
-1. **Read the entire transcript**
+1. **Read the entire transcript carefully**
 2. **Extract all key points, arguments, examples, and calls to action**
 3. **Preserve the original sequence while condensing for clarity**
 4. **Provide a detailed summary** that captures the full informational value
@@ -117,6 +251,7 @@ Summarize the following YouTube transcript using this process:
 • **ALWAYS** add emojis to section headers (🎯, 📌, 🧠, etc.)
 • **ALWAYS** use clear section breaks with --- separators
 • **NEVER** use dense paragraphs or indented text without bullets
+• **NEVER** return empty content or just formatting
 
 ---
 
@@ -127,6 +262,7 @@ Summarize the following YouTube transcript using this process:
 • The summary should allow someone to grasp the **main points and flow** without watching
 • Be precise and avoid oversimplifying complex ideas
 • Prioritize clarity and completeness—**every major concept matters**
+• **IMPORTANT**: If the transcript seems incomplete or unclear, note this in your summary
 
 ---
 
@@ -136,62 +272,58 @@ We create written summaries of YouTube videos for busy audiences who prefer read
 
 ---
 
-📋 **Example**
+📝 **Transcript to Summarize:**
 
-**Q**: Summarise this video: https://www.youtube.com/watch?v=BZOqDpZK7rw
-
-**A**:
-
-🧠 **Detailed Summary: How to Do a Mind Map the Right Way (vs. the Wrong Way)**
-
-**Introduction: Wrong approaches include:**
-• Starting randomly and drawing chaotic connections
-• Creating tangled arrows without structure
-• Visually messy layouts that lack logical flow
+{cleaned_transcript}
 
 ---
 
-📌 **Basic Principles for Effective Mind Mapping**
-
-**1. Prioritize Clear, Logical Arrows**
-• Avoid arrows that weave around content in confusing ways
-• Convoluted paths are hard to remember—use **clear, direct arrows** that show logical progression
-• Even when zoomed out, the **overall direction and flow** should remain visible
-
-> *"You're going to remember an arrow that looks like this—super bold, really clear… the logic is preserved."*
-
-**2. Don't Overload the Page with Information**
-• Avoid writing too much—include only the **core ideas**
-• Leaving small gaps encourages **recall over recognition**, which is better for learning and revision
-
----
-
-🎯 **Key Takeaways**
-
-• Mind maps should be **logical, clear**, and reflect how you understand concepts—not just a collection of facts
-• Use **clear, direct arrows** to show the flow of ideas
-
----
-
-📝 **IMPORTANT: Your output MUST look exactly like this example format!**
-
----
-
-📝 **Notes**
-
-• Be specific and retain nuance
-• Use bullets or short paragraphs
-• Exclude opinions—only summarize what was said
-• Reflect the **structure, tone, and depth** of the original
-• If parts of the transcript are unclear, infer based on context
-
----
-
-📄 **Transcript to Summarize**
-
-{transcript_text}
-    """
+🎯 **Remember**: Generate a comprehensive, well-structured summary that captures the essence of this video. Use the formatting requirements above and ensure your response is informative and complete.
+"""
+    
+    print(f"✅ Prompt generated successfully")
+    print(f"📏 Final prompt length: {len(template)} characters")
+    
     return template
+
+# 3.5. Fallback summary generation with simplified prompt
+def generate_fallback_summary(transcript_text):
+    """
+    Generate a fallback summary using a simplified prompt when the main method fails.
+    This provides a backup option for edge cases.
+    """
+    print("🔄 Generating fallback summary with simplified prompt...")
+    
+    # Simplified prompt for fallback
+    fallback_prompt = f"""
+Please provide a brief summary of this YouTube video transcript in 2-3 paragraphs:
+
+{transcript_text[:2000]}...
+
+Focus on the main points and key takeaways. Use simple, clear language.
+"""
+    
+    try:
+        response = client.chat.completions.create(
+            model=OPENAI_CONFIG['model'],
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that summarizes video content clearly and concisely."},
+                {"role": "user", "content": fallback_prompt}
+            ],
+            max_completion_tokens=1000,  # Shorter for fallback
+        )
+        
+        if response.choices and response.choices[0].message and response.choices[0].message.content:
+            fallback_result = response.choices[0].message.content.strip()
+            print(f"✅ Fallback summary generated: {len(fallback_result)} characters")
+            return fallback_result
+        else:
+            print("❌ Fallback summary response was empty")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Fallback summary generation failed: {e}")
+        return None
 
 # 4. Estimate tokens
 def estimate_tokens(text, model="gpt-5"):
@@ -204,28 +336,101 @@ def estimate_tokens(text, model="gpt-5"):
 
 # 5. Summarize with OpenAI
 def summarize_with_openai(transcript_text):
-    model = "gpt-5"
+    model = OPENAI_CONFIG['model']
     input_tokens = estimate_tokens(transcript_text, model=model)
-    max_output_tokens = min(10000, input_tokens)
+    max_output_tokens = min(OPENAI_CONFIG['max_completion_tokens'], 8000)
     prompt = generate_summary_prompt(transcript_text)
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "You summarize long YouTube transcripts professionally. You MUST follow the exact formatting instructions provided in the user prompt, including bullet points, bold text, emojis, and clear section breaks."},
-            {"role": "user", "content": prompt}
-        ],
-        max_completion_tokens=max_output_tokens,
-    )
-    return response.choices[0].message.content.strip()
+    print(f"🤖 OpenAI API call - Model: {model}, Input tokens: {input_tokens}, Max output: {max_output_tokens}")
+    print(f"📝 Prompt length: {len(prompt)} characters")
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": OPENAI_CONFIG['system_prompt']},
+                {"role": "user", "content": prompt}
+            ],
+            max_completion_tokens=max_output_tokens,  # ✅ Updated: max_tokens -> max_completion_tokens for API compatibility
+        )
+    except Exception as api_error:
+        error_msg = str(api_error)
+        print(f"❌ OpenAI API Error: {error_msg}")
+        
+        # Handle specific parameter errors with user-friendly messages
+        if "max_tokens" in error_msg and "unsupported" in error_msg:
+            print("🔄 Retrying with max_completion_tokens parameter...")
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": OPENAI_CONFIG['system_prompt']},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_completion_tokens=max_output_tokens,
+                )
+            except Exception as retry_error:
+                print(f"❌ Retry failed: {retry_error}")
+                raise Exception(f"OpenAI API configuration error: {retry_error}")
+        elif "max_completion_tokens" in error_msg and "unsupported" in error_msg:
+            # Fallback: try without token limit parameter
+            print("🔄 Retrying without token limit parameter...")
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": OPENAI_CONFIG['system_prompt']},
+                        {"role": "user", "content": prompt}
+                    ],
+                )
+            except Exception as fallback_error:
+                print(f"❌ Fallback failed: {fallback_error}")
+                raise Exception(f"OpenAI API fallback failed: {fallback_error}")
+        else:
+            # Re-raise other types of errors
+            raise api_error
+    
+    # Debug: Log the raw response structure
+    print(f"🔍 Raw response type: {type(response)}")
+    print(f"🔍 Response attributes: {dir(response)}")
+    print(f"🔍 Response choices: {response.choices if hasattr(response, 'choices') else 'No choices'}")
+    if hasattr(response, 'choices') and response.choices:
+        print(f"🔍 First choice type: {type(response.choices[0])}")
+        print(f"🔍 First choice attributes: {dir(response.choices[0])}")
+        if hasattr(response.choices[0], 'message'):
+            print(f"🔍 Message type: {type(response.choices[0].message)}")
+            print(f"🔍 Message attributes: {dir(response.choices[0].message)}")
+            print(f"🔍 Message content: {response.choices[0].message.content}")
+    
+    # Ensure we have a valid response before processing
+    if not hasattr(response, 'choices') or not response.choices:
+        raise Exception("OpenAI API returned an empty response")
+    
+    if not response.choices[0].message or not response.choices[0].message.content:
+        raise Exception("OpenAI API returned empty content")
+    
+    result = response.choices[0].message.content.strip()
+    print(f"🤖 OpenAI response length: {len(result)} characters")
+    print(f"🤖 OpenAI response preview: {result[:200]}...")
+    
+    # Validate the response
+    if not result:
+        raise Exception("OpenAI API returned empty content after processing")
+    
+    return result
 
 # 6. Convert summary to HTML
 def summary_to_html(summary_text):
     import re
     from markupsafe import Markup
 
+    print(f"🔧 Converting summary to HTML. Input length: {len(summary_text)}")
+    print(f"🔧 First 200 chars: {summary_text[:200]}...")
+
     # Split into lines for processing
     lines = summary_text.split('\n')
+    print(f"🔧 Number of lines: {len(lines)}")
+    
     html_lines = []
     in_list = False
     list_buffer = []
@@ -384,9 +589,11 @@ def internal_error(error):
 
 @app.route('/api/summarize', methods=['POST'])
 def summarize():
+    start_time = time.time()
     print(f"🔍 Received request: {request.method} {request.path}")
     print(f"📋 Headers: {dict(request.headers)}")
     print(f"📦 Content-Type: {request.content_type}")
+    print(f"🌐 Origin: {request.headers.get('Origin', 'Unknown')}")
     
     # Check if API keys are configured
     if not SUPADATA_API_KEY:
@@ -421,21 +628,108 @@ def summarize():
     try:
         print("📝 Fetching transcript...")
         transcript = get_supadata_transcript(video_id)
-        print(f"✅ Transcript fetched, length: {len(transcript)} characters")
+        
+        # Additional transcript validation
+        if not transcript or not isinstance(transcript, str):
+            print("❌ Transcript validation failed: transcript is empty or invalid")
+            return jsonify({'error': 'Failed to retrieve valid transcript from this video. This video may not have captions or transcripts available.'}), 400
+        
+        transcript = transcript.strip()
+        if len(transcript) < 50:
+            print(f"❌ Transcript too short: {len(transcript)} characters")
+            return jsonify({'error': 'This video has a very short transcript that may not be suitable for summarization. Try a video with longer content.'}), 400
+        
+        print(f"✅ Transcript fetched and validated, length: {len(transcript)} characters")
+        print(f"📝 Transcript preview: {transcript[:200]}...")
+        
     except Exception as e:
-        print(f"❌ Transcript fetch error: {e}")
-        return jsonify({'error': f'Could not fetch transcript: {str(e)}'}), 500
+        error_msg = str(e)
+        print(f"❌ Transcript fetch error: {error_msg}")
+        
+        # Provide user-friendly error messages
+        if "no available transcript" in error_msg.lower() or "no captions" in error_msg.lower():
+            user_error = "This video doesn't have captions or transcripts available. Please try a different video."
+        elif "not found" in error_msg.lower():
+            user_error = "Video transcript not found. This video may be private, deleted, or not have captions."
+        elif "authentication failed" in error_msg.lower():
+            user_error = "Service authentication error. Please contact support."
+        elif "rate limit" in error_msg.lower():
+            user_error = "Service temporarily unavailable due to high demand. Please try again later."
+        elif "timeout" in error_msg.lower():
+            user_error = "Transcript service is taking too long to respond. Please try again."
+        else:
+            user_error = f"Could not fetch transcript: {error_msg}"
+        
+        return jsonify({'error': user_error}), 500
     
     try:
         print("🤖 Generating summary...")
         summary = summarize_with_openai(transcript)
-        summary_html = summary_to_html(summary)
+        
+        # Validate summary output
+        if not summary or not isinstance(summary, str):
+            print("❌ Summary validation failed: summary is empty or invalid")
+            raise Exception("OpenAI returned an invalid or empty summary")
+        
+        summary = summary.strip()
+        if len(summary) < 20:
+            print(f"❌ Summary too short: {len(summary)} characters")
+            raise Exception("Generated summary is too short to be useful")
+        
+        print(f"📄 Raw summary text: {summary[:500]}...")  # Show first 500 chars
+        print(f"📄 Summary length: {len(summary)} characters")
+        print(f"📄 Summary type: {type(summary)}")
+        print(f"📄 Summary is empty: {not summary}")
+        print(f"📄 Summary contains '**': {'**' in summary}")
+        print(f"📄 Summary contains '-': {'-' in summary}")
+        
+        # Convert to HTML
+        try:
+            summary_html = summary_to_html(summary)
+            print(f"🔧 Generated HTML: {summary_html[:500]}...")  # Show first 500 chars
+        except Exception as html_error:
+            print(f"⚠️  HTML conversion failed: {html_error}")
+            # Fallback: return plain text summary
+            summary_html = f"<div class='summary-output'><pre>{summary}</pre></div>"
+            
         print("✅ Summary generated successfully")
+        
     except Exception as e:
-        print(f"❌ Summary generation error: {e}")
-        return jsonify({'error': f'Could not summarize transcript: {str(e)}'}), 500
+        error_msg = str(e)
+        print(f"❌ Summary generation error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        
+        # Try fallback summary generation with different parameters
+        print("🔄 Attempting fallback summary generation...")
+        try:
+            fallback_summary = generate_fallback_summary(transcript)
+            if fallback_summary and len(fallback_summary.strip()) > 20:
+                print("✅ Fallback summary generated successfully")
+                summary_html = summary_to_html(fallback_summary)
+                return jsonify({'summary': str(summary_html)})
+        except Exception as fallback_error:
+            print(f"❌ Fallback summary also failed: {fallback_error}")
+        
+        # Provide user-friendly error messages
+        if "max_tokens" in error_msg and "unsupported" in error_msg:
+            user_error = "API configuration error: The 'max_tokens' parameter is not supported. Please contact support."
+        elif "max_completion_tokens" in error_msg and "unsupported" in error_msg:
+            user_error = "API configuration error: Token limit parameter not supported. Please contact support."
+        elif "API key" in error_msg.lower():
+            user_error = "Authentication error: Please check your API configuration."
+        elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+            user_error = "Service temporarily unavailable due to rate limits. Please try again later."
+        elif "empty content" in error_msg.lower():
+            user_error = "Summary generation failed: The AI model returned empty content. This may be due to the video content being unsuitable for summarization."
+        else:
+            user_error = f"Summary generation failed: {error_msg}"
+        
+        return jsonify({'error': user_error}), 500
     
-    print("✅ Returning summary")
+    elapsed_time = time.time() - start_time
+    print(f"✅ Summary generation completed successfully in {elapsed_time:.2f} seconds")
+    print(f"📊 Final summary length: {len(summary_html)} characters")
     return jsonify({'summary': str(summary_html)})
 
 # 8. Run on port 5055 to match Vite proxy configuration
@@ -446,6 +740,13 @@ if __name__ == '__main__':
     print(f"🔑 OpenAI API Key: {'✅ Configured' if OPENAI_API_KEY else '❌ Missing'}")
     print("🌐 CORS enabled for all origins")
     print("=" * 50)
+    
+    # Validate OpenAI configuration before starting server
+    if not validate_openai_config():
+        print("❌ OpenAI configuration validation failed. Server may not work properly.")
+        print("💡 Check your API key and model configuration.")
+    else:
+        print("✅ OpenAI configuration validated successfully")
     
     try:
         app.run(debug=False, port=5055, host='0.0.0.0')
