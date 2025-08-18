@@ -30,19 +30,31 @@ const YouTubeSynthesiser = () => {
   }, []);
 
   const handleSummarise = async () => {
-    if (!url.trim()) return;
+    setError("");
+    const trimmedUrl = url.trim();
+    
+    if (!trimmedUrl) {
+      setError('Please paste a YouTube URL.');
+      return;
+    }
+    
+    // Validate it's a YouTube URL
+    const isYouTube = /youtu\.be\/|youtube\.com\//i.test(trimmedUrl);
+    if (!isYouTube) {
+      setError('Please enter a valid YouTube URL.');
+      return;
+    }
     
     setIsLoading(true);
     setStatus("Connecting to neural networks...");
-    setError("");
     setSummary("");
     
     try {
       setStatus("Fetching transcript...");
       
-      console.log("🔍 Starting summarize request for URL:", url.trim());
+      console.log("🔍 Starting summarize request for URL:", trimmedUrl);
       
-      const data = await summarize(url.trim());
+      const data = await summarize(trimmedUrl);
       console.log("📄 Response data:", data);
       
       setSummary(data.summary);
@@ -63,6 +75,12 @@ const YouTubeSynthesiser = () => {
       setStatus("Synthesis failed");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSummarise();
     }
   };
 
@@ -111,6 +129,7 @@ const YouTubeSynthesiser = () => {
                 onChange={(e) => setUrl(e.target.value)}
                 className="w-full text-center"
                 disabled={isLoading}
+                onKeyDown={onKeyDown}
               />
               
               <NeonButton
@@ -118,7 +137,7 @@ const YouTubeSynthesiser = () => {
                 size="lg"
                 className="w-full"
                 onClick={handleSummarise}
-                disabled={!url.trim() || isLoading}
+                disabled={!url.trim() || !/youtu\.be\/|youtube\.com\//i.test(url.trim()) || isLoading}
               >
                 {isLoading ? (
                   <>
