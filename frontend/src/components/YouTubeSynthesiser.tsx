@@ -3,6 +3,7 @@ import { NeonCard, NeonCardContent, NeonCardDescription, NeonCardHeader, NeonCar
 import { NeonInput } from "@/components/ui/neon-input";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Loader2 } from "lucide-react";
+import { summarize, health } from "@/lib/api";
 
 const YouTubeSynthesiser = () => {
   const [url, setUrl] = useState("");
@@ -11,31 +12,12 @@ const YouTubeSynthesiser = () => {
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
 
-  // Get API base URL from environment variables
-  const getApiBaseUrl = () => {
-    // In production, use NEXT_PUBLIC_API_BASE_URL, fallback to localhost for development
-    const baseUrl = import.meta.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5055';
-    console.log("🔧 API Base URL:", baseUrl);
-    return baseUrl;
-  };
-
   // Test API connectivity
   const testApiConnection = async () => {
     try {
-      const apiBaseUrl = getApiBaseUrl();
-      const response = await fetch(`${apiBaseUrl}/health`, {
-        method: 'GET',
-        mode: 'cors',
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log("✅ API Health Check Success:", data);
-        return true;
-      } else {
-        console.error("❌ API Health Check Failed:", response.status);
-        return false;
-      }
+      const data = await health();
+      console.log("✅ API Health Check Success:", data);
+      return true;
     } catch (err) {
       console.error("❌ API Health Check Error:", err);
       return false;
@@ -58,45 +40,9 @@ const YouTubeSynthesiser = () => {
     try {
       setStatus("Fetching transcript...");
       
-      const apiBaseUrl = getApiBaseUrl();
-      const apiUrl = `${apiBaseUrl}/api/summarize`;
+      console.log("🔍 Starting summarize request for URL:", url.trim());
       
-      console.log("🔍 Starting fetch request to:", apiUrl);
-      console.log("📋 Request payload:", { url: url.trim() });
-      
-      // Create AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: url.trim() }),
-        mode: 'cors',
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      console.log("✅ Response received:", response);
-      console.log("📊 Response status:", response.status);
-      console.log("🔑 Response headers:", Object.fromEntries(response.headers.entries()));
-      
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = { error: `HTTP error! status: ${response.status}` };
-        }
-        console.log("❌ Error response:", errorData);
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-      
-      setStatus("Generating summary...");
-      const data = await response.json();
+      const data = await summarize(url.trim());
       console.log("📄 Response data:", data);
       
       setSummary(data.summary);
