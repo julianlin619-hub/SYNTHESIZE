@@ -11,6 +11,14 @@ const YouTubeSynthesiser = () => {
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
 
+  // Get API base URL from environment variables
+  const getApiBaseUrl = () => {
+    // In production, use VITE_API_BASE_URL, fallback to localhost for development
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5055';
+    console.log("🔧 API Base URL:", baseUrl);
+    return baseUrl;
+  };
+
   const handleSummarise = async () => {
     if (!url.trim()) return;
     
@@ -22,23 +30,39 @@ const YouTubeSynthesiser = () => {
     try {
       setStatus("Fetching transcript...");
       
-      console.log("🔍 Starting fetch request to:", 'http://localhost:5055/api/summarize');
+      const apiBaseUrl = getApiBaseUrl();
+      const apiUrl = `${apiBaseUrl}/api/summarize`;
+      
+      console.log("🔍 Starting fetch request to:", apiUrl);
       console.log("📋 Request payload:", { url: url.trim() });
       
-      const response = await fetch('http://localhost:5055/api/summarize', {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: url.trim() })
+        body: JSON.stringify({ url: url.trim() }),
+        mode: 'cors',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       console.log("✅ Response received:", response);
       console.log("📊 Response status:", response.status);
       console.log("🔑 Response headers:", Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: `HTTP error! status: ${response.status}` };
+        }
         console.log("❌ Error response:", errorData);
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
@@ -51,7 +75,16 @@ const YouTubeSynthesiser = () => {
       setStatus("Synthesis complete!");
     } catch (err) {
       console.error("💥 Fetch error:", err);
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      let errorMessage = 'An unknown error occurred';
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          errorMessage = 'Request timed out. Please try again with a shorter video.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
       setError(errorMessage);
       setStatus("Synthesis failed");
     } finally {

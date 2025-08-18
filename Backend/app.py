@@ -21,16 +21,19 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Define allowed origins for CORS
-ALLOWED_ORIGINS = {
+FRONTEND_ORIGINS = os.getenv("FRONTEND_ORIGINS", "").split(",")
+ALLOWED_ORIGINS = set([
+    # Development origins
     "http://localhost:8080",  # Frontend dev server
     "http://localhost:8081",  # Frontend dev server (alternative port)
     "http://localhost:3000",  # Alternative local port
     "http://localhost:5173",  # Vite default port
-    "https://youtube-gpt-synthesizer.onrender.com",  # Production backend
-    # Add your Vercel frontend domains here when deployed
-    # "https://your-app.vercel.app",
-    # "https://www.your-app.vercel.app",
-}
+    # Production origins
+    "https://youtube-gpt-synthesizer-backend.onrender.com",  # Production backend
+    "https://*.vercel.app",  # Vercel frontend domains
+    # Add custom domains from environment
+    *[o.strip() for o in FRONTEND_ORIGINS if o.strip()]
+])
 
 # Configure CORS with specific origins and proper headers
 CORS(
@@ -558,6 +561,22 @@ def health():
         'environment': os.getenv('FLASK_ENV', 'production')
     })
 
+@app.route('/version', methods=['GET'])
+def version():
+    """Version endpoint for deployment verification and debugging"""
+    return jsonify({
+        'version': '1.0.0',
+        'deployment_time': str(datetime.now()),
+        'environment': os.getenv('FLASK_ENV', 'production'),
+        'port': os.getenv('PORT', '5055'),
+        'host': '0.0.0.0',
+        'cors_enabled': True,
+        'api_keys_configured': {
+            'supadata': bool(SUPADATA_API_KEY),
+            'openai': bool(OPENAI_API_KEY)
+        }
+    })
+
 @app.route('/api/test', methods=['GET'])
 def test():
     """Test endpoint to verify API functionality and CORS"""
@@ -735,7 +754,12 @@ def summarize():
 # 8. Run on port 5055 to match Vite proxy configuration
 if __name__ == '__main__':
     print("🚀 Starting YouTube GPT Synthesizer Backend...")
-    print(f"📍 Server will be available at: http://localhost:5055")
+    
+    # Use PORT environment variable for production (Render), fallback to 5055 for development
+    port = int(os.getenv("PORT", "5055"))
+    host = "0.0.0.0"  # Bind to all interfaces for production
+    
+    print(f"📍 Server will be available at: http://{host}:{port}")
     print(f"🔑 SupaData API Key: {'✅ Configured' if SUPADATA_API_KEY else '❌ Missing'}")
     print(f"🔑 OpenAI API Key: {'✅ Configured' if OPENAI_API_KEY else '❌ Missing'}")
     print("🌐 CORS enabled for all origins")
@@ -749,11 +773,11 @@ if __name__ == '__main__':
         print("✅ OpenAI configuration validated successfully")
     
     try:
-        app.run(debug=False, port=5055, host='0.0.0.0')
+        app.run(debug=False, port=port, host=host)
     except OSError as e:
         if "Address already in use" in str(e):
-            print(f"❌ Port 5055 is already in use. Please stop any other services using this port.")
-            print(f"💡 You can check what's using the port with: lsof -i :5055")
+            print(f"❌ Port {port} is already in use. Please stop any other services using this port.")
+            print(f"💡 You can check what's using the port with: lsof -i :{port}")
         else:
             print(f"❌ Failed to start server: {e}")
         exit(1)

@@ -186,6 +186,55 @@ youtube-gpt-synthesizer/
 - SupaData for YouTube transcript extraction
 - CORS enabled for frontend communication
 
+## Production Deployment
+
+### Overview
+The YouTube Synthesiser is designed to work in production using:
+- **Frontend**: Vercel (React + Vite)
+- **Backend**: Render (Flask + Python)
+
+### Quick Deployment
+
+1. **Deploy Backend to Render**:
+   - Connect your GitHub repo to Render
+   - Create a new Web Service
+   - Set build command: `pip install -r Backend/requirements.txt`
+   - Set start command: `gunicorn Backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
+   - Add environment variables: `SUPADATA_API_KEY`, `OPENAI_API_KEY`, `FLASK_ENV=production`
+
+2. **Deploy Frontend to Vercel**:
+   - Connect your GitHub repo to Vercel
+   - Set build command: `npm run build`
+   - Set output directory: `dist`
+   - Add environment variable: `VITE_API_BASE_URL=https://your-render-service.onrender.com`
+
+3. **Test Production Deployment**:
+   ```bash
+   ./test-production.sh
+   ```
+
+### Environment Variables
+
+**Backend (Render):**
+```bash
+SUPADATA_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
+FLASK_ENV=production
+FRONTEND_ORIGINS=https://your-app.vercel.app
+```
+
+**Frontend (Vercel):**
+```bash
+VITE_API_BASE_URL=https://your-render-service.onrender.com
+```
+
+### Verification
+- Backend health: `curl https://your-service.onrender.com/health`
+- CORS test: `curl -X OPTIONS -H "Origin: https://your-app.vercel.app" https://your-service.onrender.com/api/summarize`
+- Frontend: Open your Vercel app and test video summarization
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ## Troubleshooting
 
 ### Common Issues

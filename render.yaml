@@ -13,5 +13,7 @@ services:
         sync: false
       - key: FLASK_ENV
         value: production
+      - key: FRONTEND_ORIGINS
+        value: "https://youtube-gpt-synthesizer.vercel.app,https://youtube-gpt-synthesizer-git-main.vercel.app"
     healthCheckPath: /health
     autoDeploy: true 

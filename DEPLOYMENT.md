@@ -1,103 +1,124 @@
-# Deployment Guide
+# YouTube Synthesiser - Production Deployment Guide
 
-## The Problem
-The frontend is getting "Failed to fetch" errors because there's no backend server running in production. The Vite proxy only works in development mode.
+## Overview
+This guide covers deploying the YouTube Synthesiser to production using Vercel (frontend) and Render (backend).
 
-## Solution: Deploy Backend to a Hosting Service
+## Architecture
+- **Frontend**: Vercel (React + Vite)
+- **Backend**: Render (Flask + Python)
+- **Communication**: Direct HTTPS calls from Vercel to Render
 
-### Option 1: Deploy to Heroku (Recommended)
+## Environment Variables
 
-1. **Install Heroku CLI**
-   ```bash
-   brew install heroku/brew/heroku
-   ```
-
-2. **Login to Heroku**
-   ```bash
-   heroku login
-   ```
-
-3. **Create a new Heroku app**
-   ```bash
-   cd Backend
-   heroku create your-app-name
-   ```
-
-4. **Set environment variables**
-   ```bash
-   heroku config:set SUPADATA_API_KEY=your_supadata_api_key
-   heroku config:set OPENAI_API_KEY=your_openai_api_key
-   ```
-
-5. **Deploy the backend**
-   ```bash
-   git add .
-   git commit -m "Deploy backend"
-   git push heroku main
-   ```
-
-6. **Update frontend with your backend URL**
-   Replace `https://your-backend-app.herokuapp.com` in `src/components/Synthesiser.tsx` with your actual Heroku app URL.
-
-### Option 2: Deploy to Railway
-
-1. **Install Railway CLI**
-   ```bash
-   npm install -g @railway/cli
-   ```
-
-2. **Login to Railway**
-   ```bash
-   railway login
-   ```
-
-3. **Deploy**
-   ```bash
-   cd Backend
-   railway init
-   railway up
-   ```
-
-4. **Set environment variables in Railway dashboard**
-
-### Option 3: Deploy to Render
-
-1. **Connect your GitHub repo to Render**
-2. **Create a new Web Service**
-3. **Set build command**: `pip install -r requirements.txt`
-4. **Set start command**: `gunicorn app:app`
-5. **Add environment variables in Render dashboard**
-
-## Update Frontend Configuration
-
-After deploying the backend, update the API URL in `src/components/Synthesiser.tsx`:
-
-```typescript
-const apiUrl = isDevelopment 
-  ? '/api/summarize' 
-  : 'https://your-actual-backend-url.com/api/summarize';
-```
-
-## Environment Variables Required
-
-Make sure to set these in your hosting service:
-- `SUPADATA_API_KEY`: Your SupaData API key
-- `OPENAI_API_KEY`: Your OpenAI API key
-
-## Testing Deployment
-
-After deployment, test your backend:
-```bash
-curl -X POST https://your-backend-url.com/api/summarize \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
-```
-
-## Frontend Deployment
-
-Deploy the frontend to Vercel, Netlify, or GitHub Pages:
+### Backend (Render)
+Set these in your Render service dashboard:
 
 ```bash
-npm run build
-# Upload the dist/ folder to your hosting service
-``` 
+SUPADATA_API_KEY=your_supadata_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+FLASK_ENV=production
+FRONTEND_ORIGINS=https://youtube-gpt-synthesizer.vercel.app,https://youtube-gpt-synthesizer-git-main.vercel.app
+```
+
+### Frontend (Vercel)
+Set these in your Vercel project dashboard:
+
+```bash
+VITE_API_BASE_URL=https://youtube-gpt-synthesizer-backend.onrender.com
+```
+
+## Deployment Steps
+
+### 1. Backend (Render)
+1. Connect your GitHub repository to Render
+2. Create a new Web Service
+3. Set build command: `pip install -r Backend/requirements.txt`
+4. Set start command: `gunicorn Backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100`
+5. Set root directory to `.`
+6. Add environment variables listed above
+7. Deploy
+
+### 2. Frontend (Vercel)
+1. Connect your GitHub repository to Vercel
+2. Set build command: `npm run build`
+3. Set output directory: `dist`
+4. Add environment variables listed above
+5. Deploy
+
+## Verification Checklist
+
+### Backend Health Check
+```bash
+# Test basic connectivity
+curl -I https://youtube-gpt-synthesizer-backend.onrender.com/health
+
+# Test CORS preflight
+curl -X OPTIONS \
+  -H "Origin: https://youtube-gpt-synthesizer.vercel.app" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type" \
+  https://youtube-gpt-synthesizer-backend.onrender.com/api/summarize
+
+# Test version endpoint
+curl https://youtube-gpt-synthesizer-backend.onrender.com/version
+```
+
+### Frontend Integration Test
+1. Open your Vercel app in browser
+2. Open Developer Tools → Network tab
+3. Try to summarize a YouTube video
+4. Verify:
+   - OPTIONS preflight returns 200 with CORS headers
+   - POST request succeeds
+   - No mixed content warnings
+   - No CORS errors
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. "Failed to fetch" Error
+- Check if `VITE_API_BASE_URL` is set correctly in Vercel
+- Verify backend is running and accessible
+- Check CORS configuration in backend
+
+#### 2. CORS Errors
+- Ensure `FRONTEND_ORIGINS` includes your Vercel domain
+- Check that backend is responding to OPTIONS requests
+- Verify `Access-Control-Allow-Origin` header is present
+
+#### 3. Timeout Errors
+- Backend timeout is set to 120 seconds
+- Frontend timeout is set to 120 seconds
+- Consider reducing for very long videos
+
+#### 4. Environment Variables Not Loading
+- Restart Render service after adding env vars
+- Check Vercel environment variable names (must start with `VITE_`)
+- Verify in browser console that `import.meta.env.VITE_API_BASE_URL` is set
+
+## Monitoring
+
+### Backend Logs (Render)
+- Check Render dashboard for service logs
+- Monitor `/health` endpoint for uptime
+- Watch for API key validation errors
+
+### Frontend Monitoring (Vercel)
+- Check Vercel analytics for error rates
+- Monitor browser console for fetch errors
+- Verify environment variables are loaded
+
+## Security Notes
+- API keys are stored securely in Render environment variables
+- CORS is configured to only allow specific origins
+- No sensitive data is exposed to frontend
+- All communication uses HTTPS
+
+## Support
+If you encounter issues:
+1. Check this deployment guide
+2. Verify environment variables are set correctly
+3. Test backend endpoints directly
+4. Check browser console and network tab for errors
+5. Review Render and Vercel logs 
