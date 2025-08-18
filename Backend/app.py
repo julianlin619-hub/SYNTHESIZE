@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Optional route-map logger
+if os.getenv("PRINT_ROUTES", "0") == "1":
+    for rule in app.url_map.iter_rules():
+        logger.info("ROUTE %s -> %s", rule.rule, ",".join(sorted(rule.methods)))
+
 # Build allowed patterns
 FRONTEND_ORIGINS = os.getenv("FRONTEND_ORIGINS", "")
 extra = [o.strip() for o in FRONTEND_ORIGINS.split(",") if o.strip()]
@@ -582,6 +587,10 @@ def health():
         'cors_regex_pattern': '^https://[a-z0-9-]+\\.vercel\\.app$',
         'environment': os.getenv('FLASK_ENV', 'production')
     })
+
+@app.route('/healthz', methods=['GET'])
+def healthz():
+    return jsonify({'status': 'ok'})
 
 @app.route('/version', methods=['GET'])
 def version():
