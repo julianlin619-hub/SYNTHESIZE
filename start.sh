@@ -6,7 +6,7 @@ echo "🚀 Starting YouTube GPT Synthesizer..."
 if [ ! -f "Backend/.env" ]; then
     echo "⚠️  Warning: Backend/.env file not found!"
     echo "Please create Backend/.env with your API keys:"
-    echo "OPENAI_API_KEY=your_openai_api_key_here"
+    echo "ANTHROPIC_API_KEY=your_anthropic_api_key_here"
     echo "SUPADATA_API_KEY=your_supadata_api_key_here"
     echo ""
 fi
@@ -57,7 +57,7 @@ done
 
 # Start frontend server
 echo "🌐 Starting frontend server on port 8080..."
-npm run dev &
+cd frontend && npm run dev &
 FRONTEND_PID=$!
 
 echo "✅ Both servers are starting..."

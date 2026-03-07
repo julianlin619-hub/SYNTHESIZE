@@ -5,7 +5,7 @@ A modern web application that transforms YouTube videos into intelligent, detail
 ## Features
 
 - 🎥 **YouTube Video Processing**: Extract and process YouTube video transcripts
-- 🤖 **AI-Powered Summaries**: Generate detailed, structured summaries using OpenAI GPT-4
+- 🤖 **AI-Powered Summaries**: Generate detailed, structured summaries using Anthropic Claude
 - 📱 **Modern UI**: Beautiful, responsive interface built with React and Tailwind CSS
 
 - ⚡ **Real-time Processing**: Live progress tracking during summarization
@@ -14,7 +14,7 @@ A modern web application that transforms YouTube videos into intelligent, detail
 
 - Node.js (v18 or higher)
 - Python 3.8 or higher
-- OpenAI API key
+- Anthropic API key
 - SupaData API key
 
 ## Installation
@@ -27,7 +27,7 @@ cd youtube-gpt-synthesizer
 
 ### 2. Install Frontend Dependencies
 ```bash
-npm install
+cd frontend && npm install
 ```
 
 ### 3. Install Backend Dependencies
@@ -43,13 +43,13 @@ cd ..
 Create a `.env` file in the `Backend` directory:
 ```bash
 cd Backend
-echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+echo "ANTHROPIC_API_KEY=your_anthropic_api_key_here" > .env
 echo "SUPADATA_API_KEY=your_supadata_api_key_here" >> .env
 cd ..
 ```
 
 **Required API Keys:**
-- **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
+- **Anthropic API Key**: Get from [Anthropic Console](https://console.anthropic.com/) for Claude
 - **SupaData API Key**: Get from [SupaData](https://supadata.ai/) for YouTube transcript access
 
 ## Usage
@@ -71,7 +71,7 @@ Use the provided startup script:
 
 2. **Start Frontend Server** (in a new terminal):
    ```bash
-   npm run dev
+   cd frontend && npm run dev
    ```
    Frontend will run on `http://localhost:8080`
 
@@ -81,26 +81,25 @@ Use the provided startup script:
 2. **Paste a YouTube URL** in the input field
 3. **Click "Summarise"** to process the video
 4. **View the generated summary** with detailed insights
-5. **View the generated summary** with detailed insights
 
 ## API Endpoints
 
 - `GET /health` - Health check endpoint
-  - Returns: `{ "status": "healthy", "timestamp": "...", "cors_origins": [...] }`
+  - Returns: `{ "status": "healthy", "timestamp": "..." }`
 - `GET /api/test` - API test endpoint
-  - Returns: `{ "status": "ok", "message": "...", "cors_origin": "..." }`
-- `POST /api/summarize` - Summarize a YouTube video
+  - Returns: `{ "status": "ok", "supadata": bool, "anthropic": bool }`
+- `POST /api/summarize` - Summarize a YouTube video (streaming)
   - Body: `{ "url": "youtube_url" }`
-  - Returns: `{ "summary": "html_summary" }`
+  - Returns: Server-Sent Events stream with markdown chunks
 
 ## CORS Configuration
 
 The backend is configured with specific CORS origins for security:
 
 **Allowed Origins:**
-- `http://localhost:8080` (Local development)
-- `http://localhost:3000` (Alternative local port)
-- `https://youtube-gpt-synthesizer.onrender.com` (Production backend)
+- `http://localhost:8080`, `http://localhost:5173` (Local development)
+- `https://youtube-gpt-synthesizer.vercel.app` (Production frontend)
+- Any `*.vercel.app` subdomain
 
 **CORS Headers:**
 - Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
@@ -126,7 +125,7 @@ To add a new frontend domain (e.g., Vercel deployment):
 ## Environment Variables
 
 **Backend (.env file):**
-- `OPENAI_API_KEY` - Your OpenAI API key
+- `ANTHROPIC_API_KEY` - Your Anthropic API key for Claude
 - `SUPADATA_API_KEY` - Your SupaData API key
 - `FLASK_ENV` - Set to 'production' for production deployment
 
@@ -137,19 +136,6 @@ To add a new frontend domain (e.g., Vercel deployment):
 
 ## Testing
 
-### Integration Tests
-
-Run comprehensive integration tests:
-
-```bash
-# Test local backend
-npm run test:integration
-
-# Test specific endpoints
-npm run test:health
-npm run test:cors
-```
-
 ### Manual Testing
 
 1. **Health Check**: `curl http://localhost:5055/health`
@@ -159,17 +145,20 @@ npm run test:cors
 ## Project Structure
 
 ```
-youtube-gpt-synthesizer/
-├── src/                    # React frontend source
-│   ├── components/        # React components
-│   ├── pages/            # Page components
-│   └── ...
-├── Backend/              # Flask backend
-│   ├── app.py           # Main Flask application
+SYNTHESIZE/
+├── frontend/              # React + Vite frontend
+│   ├── src/
+│   │   ├── components/   # React components
+│   │   └── pages/        # Page components
+│   ├── package.json
+│   └── vite.config.ts
+├── Backend/               # Flask backend
+│   ├── app.py            # Main Flask application
 │   ├── requirements.txt  # Python dependencies
-│   └── venv/            # Python virtual environment
-├── package.json          # Node.js dependencies
-└── vite.config.ts       # Vite configuration
+│   └── templates/        # Backend HTML templates
+├── start.sh               # Start both servers
+├── vercel.json            # Vercel deployment config
+└── render.yaml            # Render deployment config
 ```
 
 ## Development
@@ -182,7 +171,7 @@ youtube-gpt-synthesizer/
 
 ### Backend Development
 - Flask-based REST API
-- OpenAI GPT-4 integration
+- Anthropic Claude integration for summarization
 - SupaData for YouTube transcript extraction
 - CORS enabled for frontend communication
 
@@ -196,44 +185,30 @@ The YouTube Synthesiser is designed to work in production using:
 ### Quick Deployment
 
 1. **Deploy Backend to Render**:
-   - Connect your GitHub repo to Render
-   - Create a new Web Service
+   - Connect your GitHub repo to Render (or use `render.yaml`)
    - Set build command: `pip install -r Backend/requirements.txt`
    - Set start command: `gunicorn Backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
-   - Add environment variables: `SUPADATA_API_KEY`, `OPENAI_API_KEY`, `FLASK_ENV=production`
+   - Add environment variables: `SUPADATA_API_KEY`, `ANTHROPIC_API_KEY`, `FLASK_ENV=production`, `FRONTEND_ORIGINS`
 
 2. **Deploy Frontend to Vercel**:
-   - Connect your GitHub repo to Vercel
-   - Set build command: `npm run build`
-   - Set output directory: `dist`
-   - Add environment variable: `VITE_API_BASE_URL=https://your-render-service.onrender.com`
-
-3. **Test Production Deployment**:
-   ```bash
-   ./test-production.sh
-   ```
+   - Connect your GitHub repo to Vercel (root config in `vercel.json`)
+   - Build command and output directory are pre-configured
+   - Frontend proxies `/api` to your Render backend via Vercel rewrites (if configured)
 
 ### Environment Variables
 
 **Backend (Render):**
 ```bash
 SUPADATA_API_KEY=your_key_here
-OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
 FLASK_ENV=production
 FRONTEND_ORIGINS=https://your-app.vercel.app
-```
-
-**Frontend (Vercel):**
-```bash
-VITE_API_BASE_URL=https://your-render-service.onrender.com
 ```
 
 ### Verification
 - Backend health: `curl https://your-service.onrender.com/health`
 - CORS test: `curl -X OPTIONS -H "Origin: https://your-app.vercel.app" https://your-service.onrender.com/api/summarize`
 - Frontend: Open your Vercel app and test video summarization
-
-For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Troubleshooting
 
