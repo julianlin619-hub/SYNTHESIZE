@@ -48,7 +48,8 @@ def after_request(response):
 SUPADATA_API_KEY = os.getenv('SUPADATA_API_KEY')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
-CLAUDE_MODEL = 'claude-opus-4-5'
+# Model is intentionally hardcoded — do not change without testing
+CLAUDE_MODEL = 'claude-sonnet-4-6'  # locked
 CLAUDE_MAX_TOKENS = 8000
 SYSTEM_PROMPT = """You are an expert research assistant that transforms YouTube video transcripts into comprehensive, well-structured notes.
 
