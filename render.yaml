@@ -14,7 +14,7 @@ services:
       - key: FLASK_ENV
         value: production
       - key: FRONTEND_ORIGINS
-        value: "https://youtube-gpt-synthesizer-frontend.onrender.com"
+        value: "https://synthesize-1.onrender.com"
     healthCheckPath: /health
     autoDeploy: true
 
