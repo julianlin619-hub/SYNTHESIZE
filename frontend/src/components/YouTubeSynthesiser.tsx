@@ -122,7 +122,8 @@ const YouTubeSynthesiser = () => {
     setActiveUrl(trimmed);
 
     try {
-      const response = await fetch("/api/summarize", {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "";
+      const response = await fetch(`${backendUrl}/api/summarize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
