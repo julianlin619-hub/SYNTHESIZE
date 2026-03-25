@@ -26,5 +26,5 @@ services:
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_BACKEND_URL
-        value: "https://youtube-gpt-synthesizer-backend.onrender.com"
+        value: "https://synthesize-usq1.onrender.com"
     autoDeploy: true
