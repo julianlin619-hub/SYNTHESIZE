@@ -14,6 +14,17 @@ services:
       - key: FLASK_ENV
         value: production
       - key: FRONTEND_ORIGINS
-        value: "https://youtube-gpt-synthesizer.vercel.app,https://youtube-gpt-synthesizer-git-main.vercel.app"
+        value: "https://youtube-gpt-synthesizer-frontend.onrender.com"
     healthCheckPath: /health
-    autoDeploy: true 
+    autoDeploy: true
+
+  - type: web
+    name: youtube-gpt-synthesizer-frontend
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: "https://youtube-gpt-synthesizer-backend.onrender.com"
+    autoDeploy: true
