@@ -104,30 +104,36 @@ def get_transcript(video_id):
     return ' '.join(parts)
 
 
+MAX_TRANSCRIPT_CHARS = 100000  # ~25k tokens — keeps input within budget
+
 def build_prompt(transcript):
     cleaned = re.sub(r'\s+', ' ', transcript).strip()
+    if len(cleaned) > MAX_TRANSCRIPT_CHARS:
+        cleaned = cleaned[:MAX_TRANSCRIPT_CHARS] + " [transcript truncated due to length]"
     return f'''You are given a YouTube video transcript. Produce comprehensive notes using the exact structure below. Follow it precisely.
+
+Be thorough but concise — aim for density over length. Do not repeat information across sections.
 
 ---
 
 ## 🎯 TL;DR
-Write 2-3 sentences summarising what this video is about and what the viewer will take away.
+2-3 sentences: what the video covers and the key takeaway.
 
 ## ❓ Why Does This Matter?
-In 3-5 bullet points, explain why someone should care about this topic. What problem does it solve? What opportunity does it unlock? Why is this relevant right now?
+3-5 bullet points on why this topic is relevant — what problem it solves, what opportunity it unlocks.
 
 ## 📋 Detailed Notes
-Follow the video chronologically from start to finish. Break into ## sections based on topic shifts — use the natural structure of the video.
+Follow the video chronologically. Break into sections by topic shift.
 
 For each section:
-- Capture every key point the speaker makes
-- Include specific examples, stories, case studies, and analogies they use
-- Include any data, statistics, or research cited (with context)
-- Quote the speaker directly when they say something memorable or precise
-- Note any frameworks, models, or named concepts they introduce
+- Key points the speaker makes
+- Specific examples, stories, case studies, and analogies used
+- Data, statistics, or research cited
+- Direct quotes when memorable or precise
+- Frameworks, models, or named concepts introduced
 
 ## ✅ Action Items & Recommendations
-Pull out every specific piece of advice, step, or recommendation from the video. Format as a checklist:
+Every specific piece of advice or recommendation, as a checklist:
 - [ ] Action item 1
 - [ ] Action item 2
 
