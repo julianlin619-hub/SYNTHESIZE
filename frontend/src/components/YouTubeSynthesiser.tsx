@@ -140,6 +140,16 @@ const YouTubeSynthesiser = () => {
       let buffer = "";
       let aggregated = "";
 
+      let truncated = false;
+
+      const processLine = (raw: string) => {
+        if (!raw.startsWith("data:")) return;
+        const payload = JSON.parse(raw.replace(/^data:\s*/, ""));
+        if (payload.error) throw new Error(payload.error);
+        if (payload.chunk) { aggregated += payload.chunk; setSummary(aggregated); }
+        if (payload.truncated) truncated = true;
+      };
+
       outer: while (true) {
         const { value, done } = await reader.read();
         buffer += done
@@ -150,13 +160,20 @@ const YouTubeSynthesiser = () => {
         while ((idx = buffer.indexOf("\n\n")) !== -1) {
           const raw = buffer.slice(0, idx).trim();
           buffer = buffer.slice(idx + 2);
-          if (!raw.startsWith("data:")) continue;
-          const payload = JSON.parse(raw.replace(/^data:\s*/, ""));
-          if (payload.error) throw new Error(payload.error);
-          if (payload.chunk) { aggregated += payload.chunk; setSummary(aggregated); }
-          if (payload.done) break outer;
+          processLine(raw);
+          if (raw.includes('"done"')) break outer;
         }
-        if (done) break;
+        if (done) {
+          // Process any remaining data in buffer on stream close
+          const remaining = buffer.trim();
+          if (remaining) processLine(remaining);
+          break;
+        }
+      }
+
+      if (truncated) {
+        aggregated += "\n\n---\n\n*⚠️ This summary was truncated because the video transcript was very long. Key points near the end may be missing.*";
+        setSummary(aggregated);
       }
 
       setIsComplete(true);

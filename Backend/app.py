@@ -50,7 +50,7 @@ ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 # Model is intentionally hardcoded — do not change without testing
 CLAUDE_MODEL = 'claude-sonnet-4-6'  # locked
-CLAUDE_MAX_TOKENS = 8000
+CLAUDE_MAX_TOKENS = 16000
 SYSTEM_PROMPT = """You are an expert research assistant that transforms YouTube video transcripts into comprehensive, well-structured notes.
 
 Your output lets someone fully understand a video without watching it. You prioritize specificity over generality — capture the actual examples, data, stories, and reasoning the speaker uses, not just their conclusions.
@@ -210,7 +210,9 @@ def summarize():
             ) as stream:
                 for text in stream.text_stream:
                     yield f"data: {json.dumps({'chunk': text})}\n\n"
-            yield f"data: {json.dumps({'done': True})}\n\n"
+                final = stream.get_final_message()
+                truncated = final.stop_reason == "max_tokens"
+            yield f"data: {json.dumps({'done': True, 'truncated': truncated})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
