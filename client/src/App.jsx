@@ -1,5 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  SignInButton,
+  UserButton,
+  useAuth,
+  useUser,
+} from "@clerk/clerk-react";
 import SummaryDisplay from "./components/SummaryDisplay";
 
 const YOUTUBE_URL_REGEX =
@@ -13,6 +19,8 @@ function extractVideoId(url) {
 }
 
 export default function App() {
+  const { isSignedIn, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [url, setUrl] = useState("");
   const [summary, setSummary] = useState("");
   const [status, setStatus] = useState("idle"); // idle | loading | streaming | error | done
@@ -53,9 +61,13 @@ export default function App() {
       startTimeRef.current = performance.now();
 
       try {
+        const token = await getToken();
         const res = await fetch("/api/summarize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ url: trimmed }),
           signal: controller.signal,
         });
@@ -136,20 +148,91 @@ export default function App() {
 
   const isLoading = status === "loading" || status === "streaming";
 
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-cream dark:bg-dark-bg flex items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-cream dark:bg-dark-bg text-ink dark:text-dark-text transition-colors">
+        <div className="max-w-[720px] mx-auto px-5 py-16">
+          {/* Dark mode toggle */}
+          <motion.button
+            onClick={() => setDark((d) => !d)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="fixed top-5 right-5 p-2 rounded-xl bg-surface dark:bg-dark-surface shadow-soft dark:shadow-soft-dark border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] text-ink/60 dark:text-dark-text/60 hover:text-ink dark:hover:text-dark-text transition-colors"
+            aria-label="Toggle dark mode"
+          >
+            {dark ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+              </svg>
+            )}
+          </motion.button>
+
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-12"
+          >
+            <p className="text-[13px] font-medium uppercase tracking-[0.15em] text-ink/40 dark:text-dark-text/40 mb-2">
+              SYNTHESIZE
+            </p>
+            <h1 className="text-[30px] font-normal leading-[1.3] text-ink dark:text-dark-text">
+              Paste a YouTube link.
+              <br />
+              Get an instant summary.
+            </h1>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex flex-col items-center gap-4"
+          >
+            <p className="text-[15px] text-ink/60 dark:text-dark-text/60">
+              Sign in to get started.
+            </p>
+            <SignInButton mode="modal">
+              <button className="bg-terracotta hover:bg-terracotta-hover text-white text-[15px] font-medium px-6 py-2.5 rounded-lg transition-colors">
+                Sign in
+              </button>
+            </SignInButton>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg text-ink dark:text-dark-text transition-colors">
       <div className="max-w-[720px] mx-auto px-5 py-16">
-        {/* Dark mode toggle */}
-        <motion.button
-          onClick={() => setDark((d) => !d)}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          transition={{ type: "spring", stiffness: 400, damping: 20 }}
-          className="fixed top-5 right-5 p-2 rounded-xl bg-surface dark:bg-dark-surface shadow-soft dark:shadow-soft-dark border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] text-ink/60 dark:text-dark-text/60 hover:text-ink dark:hover:text-dark-text transition-colors"
-          aria-label="Toggle dark mode"
-        >
+        {/* Top-right controls */}
+        <div className="fixed top-5 right-5 flex items-center gap-2">
+          <UserButton />
+          <motion.button
+            onClick={() => setDark((d) => !d)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="p-2 rounded-xl bg-surface dark:bg-dark-surface shadow-soft dark:shadow-soft-dark border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] text-ink/60 dark:text-dark-text/60 hover:text-ink dark:hover:text-dark-text transition-colors"
+            aria-label="Toggle dark mode"
+          >
           <AnimatePresence mode="wait">
             {dark ? (
               <motion.svg
@@ -191,7 +274,8 @@ export default function App() {
               </motion.svg>
             )}
           </AnimatePresence>
-        </motion.button>
+          </motion.button>
+        </div>
 
         {/* Header */}
         <motion.div

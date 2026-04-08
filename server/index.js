@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import Anthropic from "@anthropic-ai/sdk";
+import { clerkMiddleware, requireAuth } from "@clerk/express";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(clerkMiddleware());
 
 const anthropic = new Anthropic();
 
@@ -63,7 +65,7 @@ Specific, actionable recommendations from the video as a checklist:
 - If multiple speakers are present, attribute key points to the correct speaker.
 </quality_standards>`;
 
-app.post("/api/summarize", async (req, res) => {
+app.post("/api/summarize", requireAuth(), async (req, res) => {
   const { url } = req.body;
 
   if (!url || !YOUTUBE_URL_REGEX.test(url)) {
