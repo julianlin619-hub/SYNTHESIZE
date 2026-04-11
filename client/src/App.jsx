@@ -151,7 +151,7 @@ export default function App() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-cream dark:bg-dark-bg flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <BackgroundGrid />
         <Spinner />
       </div>
@@ -160,7 +160,7 @@ export default function App() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-cream dark:bg-dark-bg text-ink dark:text-dark-text transition-colors">
+      <div className="min-h-screen text-ink dark:text-dark-text transition-colors">
         <BackgroundGrid />
         <div className="max-w-[720px] mx-auto px-5 py-16">
           {/* Dark mode toggle */}
@@ -221,7 +221,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-cream dark:bg-dark-bg text-ink dark:text-dark-text transition-colors">
+    <div className="min-h-screen text-ink dark:text-dark-text transition-colors">
       <BackgroundGrid />
       <div className="max-w-[720px] mx-auto px-5 py-16">
         {/* Top-right controls */}
