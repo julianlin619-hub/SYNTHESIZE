@@ -7,6 +7,7 @@ import {
   useUser,
 } from "@clerk/clerk-react";
 import SummaryDisplay from "./components/SummaryDisplay";
+import BackgroundGrid from "./components/BackgroundGrid";
 
 const YOUTUBE_URL_REGEX =
   /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/;
@@ -151,6 +152,7 @@ export default function App() {
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-cream dark:bg-dark-bg flex items-center justify-center">
+        <BackgroundGrid />
         <Spinner />
       </div>
     );
@@ -159,6 +161,7 @@ export default function App() {
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-cream dark:bg-dark-bg text-ink dark:text-dark-text transition-colors">
+        <BackgroundGrid />
         <div className="max-w-[720px] mx-auto px-5 py-16">
           {/* Dark mode toggle */}
           <motion.button
@@ -219,6 +222,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-cream dark:bg-dark-bg text-ink dark:text-dark-text transition-colors">
+      <BackgroundGrid />
       <div className="max-w-[720px] mx-auto px-5 py-16">
         {/* Top-right controls */}
         <div className="fixed top-5 right-5 flex items-center gap-2">

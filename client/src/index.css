@@ -8,6 +8,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  .dark body {
+    background-color: #1f1f1b;
+  }
 }
 
 /* Blinking cursor for streaming */
