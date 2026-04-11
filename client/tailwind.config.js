@@ -6,6 +6,7 @@ export default {
     extend: {
       colors: {
         cream: "#F5F5F0",
+        canvas: "#1f1f1b",
         surface: "#FFFFFF",
         ink: "#1A1A18",
         terracotta: {
@@ -13,9 +14,9 @@ export default {
           hover: "#C4683F",
         },
         dark: {
-          bg: "#2B2A27",
-          surface: "#1F1E1B",
-          text: "#EEEEEE",
+          bg: "#1f1f1b",
+          surface: "#26261f",
+          text: "#ededea",
         },
       },
       fontFamily: {
